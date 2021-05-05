@@ -1,2 +1,3 @@
-# Practica_1_ARSO
-Proyecto en Python para montar un entorno virtual que será utilizado en la 2ª Practica de la asignatura ARSO
+# Practica_2_ARSO
+Utilizacion de la plataforma desarrollada en la practica 1 para montar un sistema-servidor funcional
+(configuracion de contenedores)
