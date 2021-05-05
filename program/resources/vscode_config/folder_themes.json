@@ -1,0 +1,15 @@
+{
+    "material-icon-theme.folders.associations": {
+        "program": "Serverless",
+        "dependencies": "Database",
+        "bash": "React-components",
+        "resources": "Webpack",
+        "repository": "Stencil",
+        "cli": "Pipe",
+        "register": "Dump",
+        "utils": "Tools",
+        "lxc_classes": "Docker",
+        "vscode_config": "vscode"
+
+    }
+}
