@@ -208,9 +208,7 @@ def check_updates():
     y actualizar las instancia guardadas en el registro. A partir 
     de las listas que proporciona lxc, se analiza si se han
     producido cambios que se deban actualizar en el programa"""    
-    cs_object = register.load(containers.ID)
-    bgs = register.load(bridges.ID)
-    if cs_object is None: return
+    
     # Cambiamos el nvl del logger para que siempre se muestren los
     # warning
     root_logger = logging.getLogger()
@@ -220,6 +218,25 @@ def check_updates():
     warned = False
     # Detecamos los cambios que se hayan producido fuera del programa
     # de los contenedores
+    warned = _check_containers()
+    # Detecamos los cambios que se hayan producido fuera del programa
+    # de los bridge   
+    warned = warned or _check_bridges()
+    # Volvemos a poner el nvl de logger de antes y nos aseguramos que 
+    # el usuario lea los warnings
+    root_logger.level = lvl
+    if warned:
+        print("Se acaban de mostrar warnings importantes que pueden " + 
+              "modificar el comportamiento del programa")
+        input("Pulsa enter para proseguir con la ejecucion una vez se " + 
+              "hayan leido ")
+
+def _check_containers():
+    warned = False
+    cs_object = register.load(containers.ID)
+    bgs = register.load(bridges.ID)
+    if cs_object is None: return False
+    
     process = subprocess.run(
         ["lxc", "list"],
         stdout=subprocess.PIPE,
@@ -241,8 +258,8 @@ def check_updates():
         index = cs_info[headers[0]].index(c.name)
         if c.state != cs_info[headers[1]][index]:
             new_state = cs_info[headers[1]][index]
-            warn = (f" El contenedor '{c.name}' se ha modificado fuera " +
-                   f"del programa, ha pasado de '{c.state}' a " + 
+            warn = (f" El contenedor '{c.name}' se ha modificado desde " +
+                   f"fuera del programa, ha pasado de '{c.state}' a " + 
                    f"'{new_state}' (informacion actualizada)")
             c.state = new_state
             program_logger.warning(warn)
@@ -273,8 +290,8 @@ def check_updates():
                         new_ip = current_nets[eth]
                         warn = (f" La ip '{ip}' de la ethernet '{eth}' " +
                                 f"del contenedor '{c.name}' se ha " +
-                                f"modificado fuera del programa, ha pasado " + 
-                                f"de {ip}:{eth} a {new_ip}:{eth} " +
+                                f"modificado desde fuera del programa, ha " + 
+                                f"pasado de {ip}:{eth} a {new_ip}:{eth} " +
                                 "(informacion actualizada)")
                         c.networks[eth] = new_ip
                         program_logger.warning(warn)
@@ -303,8 +320,13 @@ def check_updates():
         register.remove(containers.ID)
     else:
         register.update(containers.ID, cs_updated)
-    # Detecamos los cambios que se hayan producido fuera del programa
-    # de los bridge   
+    register.update(bridges.ID, bgs)
+    return warned
+
+def _check_bridges():
+    warned = False
+    bgs = register.load(bridges.ID)
+    if bgs is None: return False
     process = subprocess.run(
         ["lxc", "network", "list"],
         stdout=subprocess.PIPE,
@@ -315,20 +337,17 @@ def check_updates():
     bgs_updated = []
     for bg in bgs:
         if bg.name not in bgs_info[headers[0]]:
-            warn = (f" El bridge '{bg.name}' se ha eliminado fuera " +
-                    "del programa (informacion actualizada)")
+            warn = (f" El bridge '{bg.name}' se ha eliminado desde " +
+                    "fuera del programa (informacion actualizada)")
             program_logger.warning(warn)
+            warned = True
             continue
         bgs_updated.append(bg)
-    register.update(bridges.ID, bgs_updated)
-    # Volvemos a poner el nvl de logger de antes y nos aseguramos que 
-    # el usuario lea los warnings
-    root_logger.level = lvl
-    if warned:
-        print("Se acaban de mostrar warnings importantes que pueden " + 
-              "modificar el comportamiento del programa")
-        input("Pulsa enter para proseguir con la ejecucion una vez se " + 
-              "hayan leido ")
+    if len(bgs_updated) == 0:
+        register.remove(bridges.ID)
+    else:
+        register.update(bridges.ID, bgs_updated)
+    return warned
 
 # --------------------------------------------------------------------  
 def lxc_list():

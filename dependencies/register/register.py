@@ -144,7 +144,8 @@ def override(register:dict):
 # --------------------------------------------------------------------    
 def remove(register_id:any=None):
     """Elimina una pagina del registro. Si no se especifica ninguna
-    se elimina todo el registro
+    se elimina todo el registro. Si el registro queda vacio al
+    eliminar una pagina, el archivo se elimina
 
     Args:
         register_id (any, optional): Pagina del registro a eliminar

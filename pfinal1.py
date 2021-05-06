@@ -19,7 +19,7 @@ from program.functions import ProgramError
 # --------------------------------------------------------------------
 # Los criterios de nivel de logger que va a seguir el programa son:
 # --> Se usara:
-# - logger.warning()
+# - logger.warning():
 # cuando se necesite informar al usuario de algo importante
 # - logger.error():
 # cuando alguna accion no se haya podido completar por algun motivo

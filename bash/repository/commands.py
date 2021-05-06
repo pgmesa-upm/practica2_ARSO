@@ -272,6 +272,11 @@ def destruir(options={}, flags=[]):
         options (dict, optional): Opciones del comando destruir
         flags (list, optional): Flags introducidos en el programa
     """
+    if register.load(bridges.ID) == None:
+        msg = (" La plataforma de servidores no ha sido desplegada, " 
+                 + "se debe crear una nueva antes de poder destruir")
+        cmd_logger.error(msg)
+        return
     if not "-f" in flags:
         msg = ("Se borrara por completo la infraestructura " + 
                 "creada, contenedores, bridges y sus conexiones " + 
@@ -280,11 +285,6 @@ def destruir(options={}, flags=[]):
         answer = str(input("¿Estas seguro?(y/n): "))
         if answer.lower() != "y":
             return
-    if register.load(bridges.ID) == None:
-        msg = (" La plataforma de servidores no ha sido desplegada, " 
-                 + "se debe crear una nueva antes de poder destruir")
-        cmd_logger.error(msg)
-        return
     cmd_logger.info(" Destruyendo plataforma...\n")
     # Eliminamos contenedores
     cs = register.load(containers.ID)
