@@ -221,7 +221,7 @@ def check_updates():
     warned = _check_containers()
     # Detecamos los cambios que se hayan producido fuera del programa
     # de los bridge   
-    warned = warned or _check_bridges()
+    warned = _check_bridges() or warned
     # Volvemos a poner el nvl de logger de antes y nos aseguramos que 
     # el usuario lea los warnings
     root_logger.level = lvl
