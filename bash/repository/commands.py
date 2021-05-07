@@ -178,7 +178,7 @@ def añadir(numServs:int, options={}, flags=[], extra_cs=[]):
         simage = options["--image"][0]
     if "--simage" in options:
         simage = options["--simage"][0]
-    cmd_logger.debug(f" Creando servidores con imagen '{simage}'")
+        
     if "--name" in options:   
         names = options["--name"]
         cs = extra_cs + machines.get_servers(
@@ -192,7 +192,7 @@ def añadir(numServs:int, options={}, flags=[], extra_cs=[]):
             image=simage
         )
     cs_s = concat_array(cs)
-    msg = f" Nombre de contenedores serializados --> '{cs_s}'"
+    msg = f" Nombre de contenedores (objetos) --> '{cs_s}'"
     cmd_logger.debug(msg)
     launch = True if "-l" in flags else False
     show = True if not launch and "-q" not in flags else False
@@ -236,7 +236,7 @@ def crear(numServs:int, options={}, flags=[]):
     # Creando bridges
     bgs = machines.get_bridges(numBridges=2)
     bgs_s = concat_array(bgs)
-    cmd_logger.debug(f" Nombre de bridges serializado --> '{bgs_s}'")
+    cmd_logger.debug(f" Nombre de bridges (objetos) --> '{bgs_s}'")
     cmd_logger.info(" Creando bridges...")
     succesful_bgs = bridges.init(*bgs)
     if not "-q" in flags:
@@ -245,7 +245,7 @@ def crear(numServs:int, options={}, flags=[]):
     cmd_logger.info(f" Bridges '{bgs_s}' creados\n")
     # Creando contenedores
         # Elegimos la imagen con la que se van a crear
-    lbimage = machines.default_image
+    lbimage = None
     climage = machines.default_image
     if "--image" in options:
         climage = options["--image"][0]
@@ -254,8 +254,6 @@ def crear(numServs:int, options={}, flags=[]):
         climage = options["--climage"][0]
     if "--lbimage" in options:
         lbimage = options["--lbimage"][0]
-    cmd_logger.debug(f" Creando cliente con imagen '{climage}'")
-    cmd_logger.debug(f" Creando lb con imagen '{lbimage}'")
     lb = machines.get_loadbalancer(image=lbimage)
     cl = machines.get_clients(image=climage)
     añadir(numServs, options=options, flags=flags, extra_cs=[lb,cl]) 
@@ -307,11 +305,10 @@ def destruir(options={}, flags=[]):
         bgs_s = concat_array(successful_bgs)
         msg = (f" Bridges '{bgs_s}' eliminados\n")
         cmd_logger.info(msg)  
-    # Si se ha elimando todo eliminamos el registro   
+    # Vemos si se ha eliminado todo  
     cs = register.load(containers.ID)
     bgs = register.load(bridges.ID) 
     if cs == None and bgs == None:
-        register.remove()
         cmd_logger.info(" Plataforma destruida")
     else:
         msg = (" Plataforma destruida parcialmente " +

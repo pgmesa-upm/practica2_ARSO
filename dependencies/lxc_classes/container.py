@@ -100,7 +100,26 @@ class Container:
         for l in limits: 
             with suppress(LxcError):
                 self._run(["lxc", "config", "set", self.name] + limits[l])
-        
+                
+    def wait_for_startup(self):
+        """Espera a que el contenedor haya terminado de arrancarse
+        por completo. (Que todos los archivos, carpetas y
+        configuraciones del contenedor hayan finalizado). Es util
+        para cuando se quiere realizar operaciones nada mas se 
+        hace un start del contenedor (puede haber fallos si no todos
+        los archivos se han creado o no todo ha acabado de 
+        configurarse)"""
+        if self.state != RUNNING: return
+        state = "initializing"
+        while state != "running" and state != "degraded":
+            ask_if_running = ["systemctl", "is-system-running"]
+            process = subprocess.run(
+                ["lxc", "exec", self.name, "--"] + ask_if_running,
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE
+            )
+            state = process.stdout.decode().strip()
+    
     def start(self):
         """Arranca el contenedor
 

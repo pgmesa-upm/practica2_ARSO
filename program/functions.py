@@ -72,6 +72,26 @@ def connect_machines():
             )
         containers.configure_netfile(c)
 
+def update_lbconexions():
+    with open("/pogram/resources/haproxy.cfg", "r") as file:
+        config_file = file.read()
+    config = (
+        "\nfrontend firstbalance" +
+        "        bind *:80" +
+        "        option forwardfor" +
+        "        default_backend webservers" +
+        "\nbackend webservers" +
+        "        balance roundrobin" +
+        "        server webserver1 s1:8080" +
+        "        server webserver2 s2:8080" +
+        "        server webserver3 s3:8080" +
+        "        server webserver1 s1:8080 check" +
+        "        server webserver2 s2:8080 check" +
+        "        server webserver3 s3:8080 check" +
+        "        option httpchk"
+    )
+    return config_file + config
+
 def update_conexions():
     """Revisa si algun contenedor ha sido eliminado para 
     eliminarlo del bridge al que estaba asociado (bridge.used_by)"""

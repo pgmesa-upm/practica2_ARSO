@@ -112,37 +112,14 @@ def configure_netfile(c:Container):
     file_location = "50-cloud-init.yaml"
     with open(file_location, "w") as file:
         file.write(config_file)
-    # El problema esta en que lo crea, pero al hacer start o debido a
-    # que no se ha inicializado todavia, se crea el primer fichero 
-    # sobrescribiendo al nuestro
-    subprocess.run(["lxc","start",c.name])
-    error = "Error: not found"
-    time = 0
-    t0 = 2
-    timeout = 60
-    path = f"{c.name}/etc/netplan/50-cloud-init.yaml"
-    while "Error: not found" in error:
-        if not time >= timeout:
-            process = subprocess.run(
-                ["lxc","file","delete", path],
-                stderr=subprocess.PIPE,
-                stdout=subprocess.PIPE
-            )
-            error = process.stderr.decode().strip()
-            msg = (f"Intentando acceder al fichero de configuracion " + 
-                  f"de '{c.name}' (stderr = '{error}') -> " +
-                  ("SUCCESS" if error == "" else "ERROR"))
-            cs_logger.debug(msg)
-            sleep(t0)
-            time += t0
-        else:
-            subprocess.call(["lxc","stop",c.name])
-            cs_logger.error(f" Error al añadir fichero de " + 
-                            f"configuracion a '{c.name}' (timeout)")
-            remove(file_location)
-            return        
-    subprocess.call(["lxc","file","push", file_location, path])
-    subprocess.call(["lxc","stop",c.name])
+        
+    c.start()
+    path = "/etc/netplan/50-cloud-init.yaml"
+    cs_logger.info(" Esperando a que termine el startup del contenedor...")
+    c.wait_for_startup()
+    cs_logger.info(" startup finalizado...")
+    subprocess.call(["lxc","file","push", file_location, f"{c.name}"+path])
+    c.stop()
     cs_logger.info(f" Net del {c.tag} '{c.name}' configurada con exito")
     remove(file_location)
     _update_container(c)

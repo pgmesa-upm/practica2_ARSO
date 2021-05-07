@@ -47,7 +47,8 @@ def add(register_id:any, obj:object):
         register = load()
     
     if register_id in register:
-        raise RegisterError(" id -> '{}' is already used in the register")
+        err = f" id -> '{register_id}' is already used in the register"
+        raise RegisterError(err)
     else:
         register[register_id] = obj
         
