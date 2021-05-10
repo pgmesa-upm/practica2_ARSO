@@ -55,8 +55,9 @@ def get_loadbalancer(image:str=None) -> Container:
             image = _configure_lbimage()
         else:
             # Comprobamos que la imagen no se haya borrado en lxc
-            if _checkin_lxclist(["lxc", "image", "list"], 0, img_saved):
-                image = img_saved
+            fgp = img_saved["fingerprint"]
+            if _checkin_lxclist(["lxc", "image", "list"], 0, fgp):
+                image = img_saved["alias"]
             else:
                 register.remove(LB_IMG)
                 image = _configure_lbimage()
@@ -112,14 +113,23 @@ def _configure_lbimage() -> str:
         ["lxc", "publish", name, "--alias", alias],
         stdout=subprocess.PIPE
     )
-    if process.returncode == 0:
-        machine_logger.info(" Imagen base del balanceador creada\n")
-    else:
-        machine_logger.error(" Fallo al publicar la imagen del lb\n")
+    machine_logger.info(" Imagen base del balanceador creada\n")
     # Eliminamos el contenedor
     lb_c.delete()
     # Guardamos la imagen en el registro y la devolvemos
-    register.add(LB_IMG, alias)
+    process = subprocess.run(
+        ["lxc","image","list"],
+        stdout=subprocess.PIPE
+    )
+    images = program.lxclist_as_dict(process.stdout.decode())
+    headers = list(images.keys())
+    fingerprint = ""
+    for i, al in enumerate(images[headers[0]]):
+        if al == alias:
+            fingerprint = images[headers[1]][i]
+    image_info = {"alias": alias, "fingerprint": fingerprint}
+    register.add(LB_IMG, image_info)
+    print(image_info)
     return alias
     
 # --------------------------------------------------------------------
