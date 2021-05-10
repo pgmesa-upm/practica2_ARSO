@@ -56,12 +56,34 @@ def get_loadbalancer(image:str=None) -> Container:
         else:
             # Comprobamos que la imagen no se haya borrado en lxc
             fgp = img_saved["fingerprint"]
-            if _checkin_lxclist(["lxc", "image", "list"], 0, fgp):
-                image = img_saved["alias"]
+            msg = f" Imagen anterior guardada del balanceador '{fgp}'"
+            machine_logger.debug(msg)
+            if _checkin_lxclist(["lxc", "image", "list"], 1, fgp):
+                # Vemos el alias de la imagen por si se ha modificado 
+                process = subprocess.run(
+                    ["lxc","image","list"],
+                    stdout=subprocess.PIPE
+                )
+                images = program.lxclist_as_dict(process.stdout.decode())
+                headers = list(images.keys())
+                alias = ""
+                for i, fg in enumerate(images[headers[1]]):
+                    if fg == fgp:
+                        alias = images[headers[0]][i]
+                        break
+                image_info = {"alias": alias, "fingerprint": fgp}
+                register.update(LB_IMG, image_info, override=True)
+                image = alias
+                if alias == "": image = fgp
+                msg = f" Alias actual de la imagen del lb -> '{alias}'"
+                machine_logger.debug(msg)
             else:
+                # como se ha eliminado creamos otra nueva
+                msg = f" Imagen del balanceador se ha borrado desde fuera"
+                machine_logger.debug(msg)
                 register.remove(LB_IMG)
                 image = _configure_lbimage()
-    machine_logger.debug(f" Creando balanceador con imagen {image}")
+    machine_logger.debug(f" Creando balanceador con imagen '{image}'")
     return Container("lb", image, tag=LB)
 
 def _configure_lbimage() -> str:
@@ -129,7 +151,6 @@ def _configure_lbimage() -> str:
             fingerprint = images[headers[1]][i]
     image_info = {"alias": alias, "fingerprint": fingerprint}
     register.add(LB_IMG, image_info)
-    print(image_info)
     return alias
     
 # --------------------------------------------------------------------
