@@ -1,6 +1,7 @@
 {
     "material-icon-theme.folders.associations": {
-        "program": "Serverless",
+    
+        "program": "Environment",
         "dependencies": "Database",
         "bash": "React-components",
         "resources": "Webpack",
@@ -9,7 +10,9 @@
         "register": "Dump",
         "utils": "Tools",
         "lxc_classes": "Docker",
-        "vscode_config": "vscode"
+        "vscode_config": "vscode",
+        "platform": "Expo",
+        "machines": "Serverless"
 
     }
 }

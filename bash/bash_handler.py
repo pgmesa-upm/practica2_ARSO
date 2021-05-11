@@ -49,7 +49,7 @@ def config_cli() -> Cli:
         "deploys a server platform\n           with the number " +
         "of servers especified (if void, 2 servers are created). It\n " + 
         "          also initializes a load balancer that acts as a bridge " +
-        "between the servers\n           and the clients. Everything is " +
+        "between the servers.\n           Everything is " +
         "connected by 2 virtual bridges"
     )
     crear = Command(cmd_name, description=msg, extra_arg=True, 
@@ -64,8 +64,6 @@ def config_cli() -> Cli:
     msg ="<alias or fingerprint> allows to specify the image of the servers"
     crear.add_option("--simage", description=msg, extra_arg=True, mandatory=True)
     msg = "<alias or fingerprint> allows to specify the image of the load balancer"
-    crear.add_option("--climage", description=msg, extra_arg=True, mandatory=True)
-    msg = "<alias or fingerprint> allows to specify the image of the client"
     crear.add_option("--lbimage", description=msg, extra_arg=True, mandatory=True)
     cli.add_command(crear)
     _commands[cmd_name] = commands_rep.crear
@@ -120,14 +118,13 @@ def config_cli() -> Cli:
     _commands[cmd_name] = commands_rep.eliminar
     
     cmd_name = "show"
-    msg = ("<diagram, state or files> shows information about the program. " + 
+    msg = ("<diagram, state or dep> shows information about the program. " + 
           "'state' shows\n           information about every machine/component " +
           "of the platform, 'diagram' displays \n           a diagram that " +
-          "explains the structure of the platform and 'files' shows the " + 
-          "files \n           structure of the code and the external " +
-          "dependencies of the program")
+          "explains the structure of the platform and 'dep' shows the " + 
+          "\n           dependencies of the program and if they are fulfilled")
     show = Command(cmd_name, description=msg, extra_arg=True, 
-                            mandatory=True, choices=["diagram", "state", "files"])
+                            mandatory=True, choices=["diagram", "state", "dep"])
     cli.add_command(show)
     _commands[cmd_name] = commands_rep.show
     

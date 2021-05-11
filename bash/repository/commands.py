@@ -1,15 +1,20 @@
 
 import logging
-from contextlib import suppress
 
 from .reused_code import target_containers
-import program.controllers.bridges as bridges
-import program.controllers.containers as containers
-import program.machines as machines
-import program.functions as program
+from program.controllers import bridges, containers
+from program.platform.machines import (
+    servers, 
+    load_balancer, 
+    net_devices
+)
+from program import program
 import dependencies.register.register as register
-from dependencies.utils.tools import objectlist_as_dict
-from dependencies.utils.tools import concat_array
+from dependencies.utils.tools import (
+    objectlist_as_dict,
+    concat_array
+)
+from program.platform import platform
 
 # --------------------- REPOSITORIO DE COMANDOS ----------------------
 # --------------------------------------------------------------------
@@ -33,7 +38,7 @@ def arrancar(*target_cs, options={}, flags=[]):
     cmd_logger.info(msg)
     succesful_cs = containers.start(*target_cs)
     if not "-q" in flags:
-        program.lxc_list()
+        program.list_lxc_containers()
     cs_s = concat_array(succesful_cs)
     msg = (f" Los contenedores '{cs_s}' han sido arrancados \n")
     cmd_logger.info(msg)
@@ -57,7 +62,7 @@ def parar(*target_cs, options={}, flags=[]):
     cmd_logger.info(msg)
     succesful_cs = containers.stop(*target_cs)
     if not "-q" in flags:
-        program.lxc_list()
+        program.list_lxc_containers()
     cs_s = concat_array(succesful_cs)
     msg = (f" Los contenedores '{cs_s}' han sido detenidos \n")
     cmd_logger.info(msg)
@@ -76,7 +81,7 @@ def pausar(*target_cs, options={}, flags=[]):
     cmd_logger.info(msg)
     succesful_cs = containers.pause(*target_cs)
     if not "-q" in flags:
-        program.lxc_list()
+        program.list_lxc_containers()
     cs_s = concat_array(succesful_cs)
     msg = (f" Los contenedores '{cs_s}' han sido pausados \n")
     cmd_logger.info(msg)
@@ -84,7 +89,7 @@ def pausar(*target_cs, options={}, flags=[]):
 # --------------------------------------------------------------------
 @target_containers(cmd_logger) 
 def eliminar(*target_cs, options={}, flags=[],
-                    skip_tags=[machines.LB, machines.CLIENT]): 
+                    skip_tags=[load_balancer.TAG]): 
     """Elimina los contenedores que se enceuntren en target_cs.
     Por defecto, esta funcion solo elimina los contenedores que 
     sean servidores
@@ -114,9 +119,9 @@ def eliminar(*target_cs, options={}, flags=[],
     cmd_logger.info(msg)
     succesful_cs = containers.delete(*target_cs)
     # Actualizamos los contenedores que estan asociados a cada bridge
-    program.update_conexions()
+    platform.update_conexions()
     if not "-q" in flags:
-        program.lxc_list()
+        program.list_lxc_containers()
     cs_s = concat_array(succesful_cs)
     msg = (f" Los contenedores '{cs_s}' han sido eliminados \n")
     cmd_logger.info(msg)
@@ -155,7 +160,7 @@ def añadir(numServs:int, options={}, flags=[], extra_cs=[]):
             pueda comunicar con esta funcion y tambien cree los 
             clientes y el balanceador, ademas de los servidores
     """
-    if register.load(bridges.ID) == None:
+    if not platform.is_deployed():
         msg = (" La plataforma de servidores no ha sido " +
                     "desplegada, se debe crear una nueva antes " +
                         "de añadir los servidores")
@@ -163,7 +168,7 @@ def añadir(numServs:int, options={}, flags=[], extra_cs=[]):
         return
     existent_cs = register.load(containers.ID)
     if existent_cs != None:
-        ex_s = filter(lambda cs: cs.tag == machines.SERVER, existent_cs)
+        ex_s = filter(lambda cs: cs.tag == servers.TAG, existent_cs)
         num = len(list(ex_s))
         if num + numServs > 5: 
             msg = (f" La plataforma no admite mas de 5 servidores. " +
@@ -173,7 +178,7 @@ def añadir(numServs:int, options={}, flags=[], extra_cs=[]):
             return
     # Creando contenedores 
         # Elegimos la imagen con la que se van a crear
-    simage = machines.default_image
+    simage = servers.default_image
     if "--image" in options:
         simage = options["--image"][0]
     if "--simage" in options:
@@ -181,13 +186,13 @@ def añadir(numServs:int, options={}, flags=[], extra_cs=[]):
         
     if "--name" in options:   
         names = options["--name"]
-        cs = extra_cs + machines.get_servers(
+        cs = extra_cs + servers.get_servers(
             numServs, 
             *names, 
             image=simage
         )
     else:
-        cs = extra_cs + machines.get_servers(
+        cs = extra_cs + servers.get_servers(
             numServs,
             image=simage
         )
@@ -200,7 +205,7 @@ def añadir(numServs:int, options={}, flags=[], extra_cs=[]):
     cmd_logger.info(f" Inicializando contenedores '{cs_s}'...")
     successful_cs = containers.init(*cs)
     if not "-q" in flags:
-        program.lxc_list() 
+        program.list_lxc_containers() 
     cs_s = concat_array(successful_cs)
     msg = (f" Contenedores '{cs_s}' inicializados\n")
     cmd_logger.info(msg)
@@ -208,7 +213,7 @@ def añadir(numServs:int, options={}, flags=[], extra_cs=[]):
         # Estableciendo conexiones
         cmd_logger.info(" Estableciendo conexiones " +
                                 "entre contenedores y bridges...")
-        program.connect_machines()
+        platform.update_conexions()
         cmd_logger.info(" Conexiones establecidas\n")
         # Arrancamos los contenedores creados con exito 
         # (si nos lo han pedido) 
@@ -227,36 +232,31 @@ def crear(numServs:int, options={}, flags=[]):
         options (dict, optional): Opciones del comando crear
         flags (list, optional): Flags introducidos en el programa
     """
-    if register.load(bridges.ID) != None:
+    if platform.is_deployed():
         msg = (" La plataforma de servidores ya ha sido desplegada, " 
               + "se debe destruir la anterior para crear otra nueva")
         cmd_logger.error(msg)
         return   
     cmd_logger.info(" Desplegando la plataforma de servidores...\n")
     # Creando bridges
-    bgs = machines.get_bridges(numBridges=2)
+    bgs = net_devices.get_bridges(numBridges=2)
     bgs_s = concat_array(bgs)
     cmd_logger.debug(f" Nombre de bridges (objetos) --> '{bgs_s}'")
     cmd_logger.info(" Creando bridges...")
     succesful_bgs = bridges.init(*bgs)
     if not "-q" in flags:
-        program.lxc_network_list()
+        program.list_lxc_bridges()
     bgs_s = concat_array(succesful_bgs)
     cmd_logger.info(f" Bridges '{bgs_s}' creados\n")
     # Creando contenedores
         # Elegimos la imagen con la que se van a crear
     lbimage = None
-    climage = machines.default_image
     if "--image" in options:
-        climage = options["--image"][0]
         lbimage = options["--image"][0]
-    if "--climage" in options:
-        climage = options["--climage"][0]
     if "--lbimage" in options:
         lbimage = options["--lbimage"][0]
-    lb = machines.get_loadbalancer(image=lbimage)
-    cl = machines.get_clients(image=climage)
-    añadir(numServs, options=options, flags=flags, extra_cs=[lb,cl]) 
+    lb = load_balancer.get_lb(image=lbimage)
+    añadir(numServs, options=options, flags=flags, extra_cs=[lb]) 
     cmd_logger.info(" Plataforma de servidores desplegada")
 
 # --------------------------------------------------------------------
@@ -270,7 +270,7 @@ def destruir(options={}, flags=[]):
         options (dict, optional): Opciones del comando destruir
         flags (list, optional): Flags introducidos en el programa
     """
-    if register.load(bridges.ID) == None:
+    if not platform.is_deployed():
         msg = (" La plataforma de servidores no ha sido desplegada, " 
                  + "se debe crear una nueva antes de poder destruir")
         cmd_logger.error(msg)
@@ -301,7 +301,7 @@ def destruir(options={}, flags=[]):
         cmd_logger.info(msg)
         successful_bgs = bridges.delete(*bgs)
         if not "-q" in flags:
-            program.lxc_network_list()
+            program.list_lxc_bridges()
         bgs_s = concat_array(successful_bgs)
         msg = (f" Bridges '{bgs_s}' eliminados\n")
         cmd_logger.info(msg)  
@@ -325,10 +325,10 @@ def show(choice:str, options={}, flags={}):
         flags (list, optional): Flags introducidos en el programa
     """
     if choice == "diagram":
-        program.show_diagram()
+        program.show_platform_diagram()
     elif choice == "state":
-        program.print_state()
-    elif choice == "files":
-        program.show_files_structure()
+        platform.print_state()
+    elif choice == "dependencies":
+        program.show_dependencies()
         
 # --------------------------------------------------------------------

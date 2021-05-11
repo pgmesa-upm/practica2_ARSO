@@ -56,7 +56,6 @@ def delete(b:Bridge):
     else:
         bgs_logger.info(f" bridge '{b.name}' eliminado con exito")
     _update_bridge(b, remove=True)
-# -------------------------------------------------------------------
 
 # -------------------------------------------------------------------
 def attach(cs_name:str, to_bridge:Bridge):

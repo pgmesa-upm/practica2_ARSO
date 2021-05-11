@@ -21,12 +21,12 @@ class Container:
                 de cada contenedor
         """
     def __init__(self, name:str, container_image:str, tag:str=""):
-        
         self.name = str(name)
         self.container_image = container_image
         self.state = NOT_INIT
         self.tag = tag
         self.networks = {}
+        self.connected_networks = {}
         
     def _run(self, cmd:list):
         """Ejecuta un comando mediante subprocess y controla los 
@@ -58,11 +58,19 @@ class Container:
             eth (str): Subred a la que se quiere conectar
             with_ip (str): Ip que se quiere utilizar
         """
-        cmd = ["lxc","config","device","set", self.name,
-                                        eth, "ipv4.address", with_ip]
-        self._run(cmd)
         self.networks[eth] = with_ip
+        self.connected_networks[eth] = False
 
+    def connect_to_network(self, eth):
+        if self.connected_networks[eth]:
+            err = (f" {self.tag} '{self.name}' ya se ha conectado " +
+                   f"a la network '{eth}' con la ip {self.networks[eth]}")
+            raise LxcError(err)
+        cmd = ["lxc","config","device","set", self.name,
+                eth, "ipv4.address", self.networks[eth]]
+        self._run(cmd)
+        self.connected_networks[eth] = True
+    
     def open_terminal(self):
         """Abre la terminal del contenedor (utiliza 
         xterm -> instalar)

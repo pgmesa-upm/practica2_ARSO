@@ -68,60 +68,23 @@ def open_terminal(c:Container):
     c.open_terminal()
         
 # --------------------------------------------------------------------
-def connect(c:Container, with_ip:str, to_network:str):
-    """Añade un contenedor a una network con la ip especificada
+def connect_to_networks(c:Container):
+    """Conecta un contenedor a sus networks previamente añadidas
 
     Args:
         c (Container): Contenedor a manipular
         with_ip (str): ip con la que se quiere conectar a la subred
         to_network (str): subred a la que se quiere conectar
     """
-    ip, eth = with_ip, to_network
-    cs_logger.info(f" Conectando {c.tag} '{c.name}' usando la " + 
-                            f"ip '{ip}' a la network '{eth}'...")
-    try:
-        c.add_to_network(eth, ip)
-        cs_logger.info(f" Conexion realizada con exito")
-    except LxcError as err:
-        cs_logger.error(err)
-    _update_container(c)
-
-def configure_netfile(c:Container):
-    """Genera el fichero de configuracion .yaml del contenedor y lo
-    introduce en la carpeta correspondiente. Se arranca el contenedor
-    y se espera a que se cree el sistema de ficheros entero para poder
-    añadir el fichero a la ruta etc/netplan del contenedor
-
-    Args:
-        c (Container): Contenedor a configurar
-    """
-    networks = c.networks
-    if len(networks) == 1 and list(networks.keys())[0] == "eth0": return
-    config_file =("network:\n" +
-                  "    version: 2\n" + 
-                  "    ethernets:\n")
-    for eth in networks:
-        new_eth_config = (f"        {eth}:\n" + 
-                            "            dhcp4: true\n")
-        config_file += new_eth_config
-    msg = (f" Configurando el net_file del {c.tag} '{c.name}'... " +
-           "(Esta operacion puede tardar un rato dependiendo del PC " + 
-           "o incluso saltar el timeout si es muy lento)")
-    cs_logger.info(msg)
-    cs_logger.debug("\n" + config_file)
-    file_location = "50-cloud-init.yaml"
-    with open(file_location, "w") as file:
-        file.write(config_file)
-        
-    c.start()
-    path = "/etc/netplan/50-cloud-init.yaml"
-    cs_logger.info(" Esperando a que termine el startup del contenedor...")
-    c.wait_for_startup()
-    cs_logger.info(" startup finalizado...")
-    subprocess.call(["lxc","file","push", file_location, f"{c.name}"+path])
-    c.stop()
-    cs_logger.info(f" Net del {c.tag} '{c.name}' configurada con exito")
-    remove(file_location)
+    for eth, ip in c.networks.items():
+        if c.connected_networks[eth]: continue
+        cs_logger.info(f" Conectando {c.tag} '{c.name}' usando la " + 
+                                f"ip '{ip}' a la network '{eth}'...")
+        try:
+            c.connect_to_network(eth)
+            cs_logger.info(f" Conexion realizada con exito")
+        except Exception as err:
+            cs_logger.error(err)
     _update_container(c)
     
 # --------------------------------------------------------------------    

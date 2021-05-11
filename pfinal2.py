@@ -9,8 +9,8 @@ import subprocess
 
 import bash.bash_handler as bash
 from bash.bash_handler import CmdLineError
-import program.functions as program
-from program.functions import ProgramError
+from program import program
+from program.program import ProgramError
  
 # ------------------- MAIN (INICIO DE EJECUCION) ---------------------
 # --------------------------------------------------------------------
@@ -40,7 +40,7 @@ def main():
         _config_verbosity(args_processed["flags"])
         # Realizamos unas comprobaciones previas (ProgramError)
         program.check_enviroment()
-        program.check_updates()
+        program.check_platform_updates()
         # Informamos del inicio del programa y ejecutamos la orden
         main_logger.info(" Programa iniciado")
         main_logger.debug(f" Ejecutando la orden {args_processed}")
