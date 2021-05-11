@@ -6,14 +6,13 @@ from program.controllers import bridges, containers
 from program.platform.machines import (
     servers, 
     load_balancer, 
-    net_devices
+    net_devices,
+    clients,
+    data_base
 )
 from program import program
 import dependencies.register.register as register
-from dependencies.utils.tools import (
-    objectlist_as_dict,
-    concat_array
-)
+from dependencies.utils.tools import concat_array
 from program.platform import platform
 
 # --------------------- REPOSITORIO DE COMANDOS ----------------------
@@ -89,7 +88,7 @@ def pausar(*target_cs, options={}, flags=[]):
 # --------------------------------------------------------------------
 @target_containers(cmd_logger) 
 def eliminar(*target_cs, options={}, flags=[],
-                    skip_tags=[load_balancer.TAG]): 
+            skip_tags=[load_balancer.TAG, clients.TAG]): 
     """Elimina los contenedores que se enceuntren en target_cs.
     Por defecto, esta funcion solo elimina los contenedores que 
     sean servidores
@@ -101,13 +100,18 @@ def eliminar(*target_cs, options={}, flags=[],
             se comunique con esta funcion. Por defecto esta funcion 
             no elimina contenedores que sean clientes o balanceadores
     """
-    target_cs = filter(lambda cs: not cs.tag in skip_tags, target_cs)
-    target_cs = list(target_cs)
-    if len(target_cs) == 0:
-        msg = (" No hay servidores que eliminar o los " + 
-                                    "introducidos no son validos")
-        cmd_logger.error(msg)
-        return
+    # Miramos que contenedores son validos para eliminar
+    if len(skip_tags) > 0:
+        valid_cs = []
+        for c in target_cs:
+            if c.tag in skip_tags:
+                msg = (f" El contenedor '{c}' no es un servidor " + 
+                        "(solo se pueden eliminar servidores)")
+                cmd_logger.error(msg)  
+                continue
+            valid_cs.append(c)
+        if len(valid_cs) == 0: return
+        target_cs = valid_cs
     if not "-f" in flags:
         print("Se eliminaran los servidores:" +
                     f" '{concat_array(target_cs)}'")
@@ -250,13 +254,17 @@ def crear(numServs:int, options={}, flags=[]):
     cmd_logger.info(f" Bridges '{bgs_s}' creados\n")
     # Creando contenedores
         # Elegimos la imagen con la que se van a crear
-    lbimage = None
+    lbimage = None; climage = None
     if "--image" in options:
         lbimage = options["--image"][0]
+        climage = options["--climage"][0]
     if "--lbimage" in options:
         lbimage = options["--lbimage"][0]
+    if "--climage" in options:
+        climage = options["--climage"][0]
     lb = load_balancer.get_lb(image=lbimage)
-    añadir(numServs, options=options, flags=flags, extra_cs=[lb]) 
+    cl = clients.get_client(image=climage)
+    añadir(numServs, options=options, flags=flags, extra_cs=[lb, cl]) 
     cmd_logger.info(" Plataforma de servidores desplegada")
 
 # --------------------------------------------------------------------

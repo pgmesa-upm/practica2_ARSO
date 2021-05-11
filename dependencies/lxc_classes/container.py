@@ -52,16 +52,22 @@ class Container:
             raise LxcError(err_msg)    
         
     def add_to_network(self, eth:str, with_ip:str):
-        """Añade el contenedor a una subred con la ip especificada
+        """Añade una tarjeta de red para conectarse a una red (se 
+        conectara al bridge/net a la que se haya asociado la tarjeta)
+        con la ip especificada
 
         Args:
-            eth (str): Subred a la que se quiere conectar
+            eth (str): Tarjeta de red 
             with_ip (str): Ip que se quiere utilizar
         """
         self.networks[eth] = with_ip
         self.connected_networks[eth] = False
 
     def connect_to_network(self, eth):
+        if eth not in self.networks:
+            err = (f" La tarjeta de red '{eth}' no se encuentra " + 
+                   f"en el {self.tag} '{self.name}'")
+            raise LxcError(err)
         if self.connected_networks[eth]:
             err = (f" {self.tag} '{self.name}' ya se ha conectado " +
                    f"a la network '{eth}' con la ip {self.networks[eth]}")

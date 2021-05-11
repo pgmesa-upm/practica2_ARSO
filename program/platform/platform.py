@@ -3,7 +3,7 @@ from dependencies.utils.tools import pretty, objectlist_as_dict
 import program.controllers.bridges as bridges
 import program.controllers.containers as containers
 import dependencies.register.register as register
-from .machines import load_balancer, net_devices
+from .machines import load_balancer, net_devices, servers, clients
 
 # --------------------- FUNCIONES DE PLATAFORMA ------------------------
 # --------------------------------------------------------------------
@@ -42,12 +42,19 @@ def update_conexions():
     )
     for c in cs:
         # Conectamos load balancer a los 2 bridges y el resto solo 
-        # al bridge lxdbr0 (el que crea por defecto lxd)
+        # al bridge lxdbr0 (el que crea por defecto lxd) y cliente 
+        # solo a lxdbr1
         if c.tag == load_balancer.TAG:
+            if not c.connected_networks["eth0"]:
+                bridges.attach(c.name, bgs_dict["lxdbr0"], "eth0")
             if not c.connected_networks["eth1"]:
-                bridges.attach(c.name, bgs_dict["lxdbr1"])
-        if not c.connected_networks["eth0"]:
-            bridges.attach(c.name, bgs_dict["lxdbr0"])
+                bridges.attach(c.name, bgs_dict["lxdbr1"], "eth1")
+        elif c.tag == servers.TAG:
+            if not c.connected_networks["eth0"]:
+                bridges.attach(c.name, bgs_dict["lxdbr0"], "eth0")
+        elif c.tag == clients.TAG:
+            if not c.connected_networks["eth0"]:
+                bridges.attach(c.name, bgs_dict["lxdbr1"], "eth0")
         containers.connect_to_networks(c)
         
 # --------------------------------------------------------------------

@@ -38,7 +38,7 @@ def init(b:Bridge=None):
 
 # -------------------------------------------------------------------
 @catch_foreach(bgs_logger)
-def delete(b:Bridge):
+def delete(b:Bridge=None):
     bgs_logger.info(f" Eliminando bridge '{b.name}'...")
     try:
         b.delete()
@@ -58,7 +58,7 @@ def delete(b:Bridge):
     _update_bridge(b, remove=True)
 
 # -------------------------------------------------------------------
-def attach(cs_name:str, to_bridge:Bridge):
+def attach(cs_name:str, to_bridge:Bridge, with_eth:str):
     """Añade un contenedor al bridge
 
     Args:
@@ -66,10 +66,11 @@ def attach(cs_name:str, to_bridge:Bridge):
         to_bridge (Bridge): Bridge al que se va a añadir el contenedor
     """
     bridge = to_bridge
-    msg = f" Agregando '{cs_name}' al bridge {bridge.name}..."
+    msg = (f" Agregando '{cs_name}' al bridge '{bridge.name}' " + 
+           f"usando la tarjeta de red '{with_eth}'...")
     bgs_logger.info(msg)
     try:
-        bridge.add_container(cs_name)
+        bridge.add_container(cs_name, with_eth)
         bgs_logger.info(f" '{cs_name}' agregado con exito")
     except LxcNetworkError as err:
         bgs_logger.error(err)

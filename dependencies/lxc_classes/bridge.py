@@ -6,7 +6,6 @@ class Bridge:
 
         Args:
             name (str): Nombre del Bridge
-            ethernet (str): Nombre del ethernet que le va a asociar lxc
             ipv4_nat (bool, optional): Indica si va a tener ipv4
             ipv4_addr (str, optional): Especifica la ipv4 que va a 
                 tener el bridge y el identificador de red que van a 
@@ -16,7 +15,7 @@ class Bridge:
                 tener el bridge y el identificador de red que van a 
                 tener las ips de los contenedores que se conecten al el
         """
-    def __init__(self, name:str, ethernet:str,
+    def __init__(self, name:str,
                  ipv4_nat:bool=False, ipv4_addr:str=None,
                  ipv6_nat:bool=False, ipv6_addr:str=None):
         self.name = str(name)
@@ -24,11 +23,6 @@ class Bridge:
         self.ipv4_addr = ipv4_addr if ipv4_addr != None else "none"
         self.ipv6_nat = "true" if ipv6_nat == True else "false"
         self.ipv6_addr = ipv6_addr if ipv6_addr != None else "none"
-        # El ethernet depende de que bridge se ha creado primero
-        # no depende del nombre ni la ip. Lxc asocia una ethernet 
-        # al bridge al crearse. Si se ha creado el segundo, lxc le 
-        # asociara la eth1 
-        self.ethernet = ethernet
         self.used_by = []
     
     def _run(self, cmd:list):
@@ -54,7 +48,7 @@ class Bridge:
             err_msg += process.stderr.decode().strip()[6:]
             raise LxcNetworkError(err_msg)
   
-    def add_container(self, cs_name:str):
+    def add_container(self, cs_name:str, with_eth:str):
         """Añade un contenedor a la red del bridge
 
         Args:
@@ -62,7 +56,7 @@ class Bridge:
         """
         cmd = [
             "lxc", "network", "attach" ,
-            self.name, cs_name, self.ethernet
+            self.name, cs_name, with_eth
         ]
         self._run(cmd)
         self.used_by.append(cs_name)

@@ -26,8 +26,8 @@ def get_bridges(numBridges:int) -> list:
         b_name = f"lxdbr{i}"
         b = Bridge(
             b_name, 
-            ethernet=f"eth{i}",
-            ipv4_nat=True, ipv4_addr=f"10.0.{i}.1/24"
+            ipv4_nat=True,
+            ipv4_addr=f"10.0.{i}.1/24"
         )
         bgs.append(b)
     return bgs

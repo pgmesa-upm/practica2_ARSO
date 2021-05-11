@@ -147,7 +147,6 @@ def check_platform_updates():
     # el usuario lea los warnings
     root_logger.level = lvl
     if warned:
-        platform.update_conexions()
         print("Se acaban de mostrar warnings importantes que pueden " + 
               "modificar el comportamiento del programa")
         input("Pulsa enter para proseguir con la ejecucion una vez se " + 
@@ -204,7 +203,8 @@ def _check_containers():
                             "modificado desde fuera del programa o hay " + 
                             f"algun error ya que el contenedor esta " +
                             "arrancado pero lxc no muestra la conexion " +
-                            "(informacion NO actualizada)")
+                            "(informacion actualizada)")
+                    c.connected_networks[eth] = False
                     program_logger.warning(warn)
                     warned = True
                 else:
@@ -219,24 +219,14 @@ def _check_containers():
                         program_logger.warning(warn)
                         warned = True
                     current_nets.pop(eth)
-            for eth in current_nets:
-                warn = (f" El contenedor '{c.name}' se ha conectado a otro " +
-                           "bridge que no forma parte del programa " + 
-                           "(informacion NO actualizada)")
-                for bg in bgs:
-                    if eth == bg.ethernet:
-                        warn = (f" El contenedor '{c.name}' se ha conectado " +
-                           f"a otro bridge que forma parte del programa " + 
-                           f"'{bg.name}' (informacion actualizada)")
-                        if c.name not in bg.used_by:
-                            bg.used_by.append(c.name)
-                        c.networks[eth] = current_nets[eth]
-                        program_logger.warning(warn)
-                        warned = True
-                        break
-                else:
-                    program_logger.warning(warn)
-                    warned = True
+            for eth, ip in current_nets.items():
+                warn = (f" Se ha añadido la tarjeta de red '{eth}' con " +
+                        f"ip '{ip}' al contenedor '{c.name}' " + 
+                         "(informacion actualizada)")
+                c.add_to_network(eth, ip)
+                c.connected_networks[eth] = True
+                program_logger.warning(warn)
+                warned = True
         cs_updated.append(c)
     if len(cs_updated) == 0:
         register.remove(containers.ID)

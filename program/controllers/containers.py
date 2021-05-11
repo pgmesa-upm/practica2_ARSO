@@ -54,7 +54,7 @@ def stop(c:Container):
 
 # --------------------------------------------------------------------
 @catch_foreach(cs_logger)
-def delete(c:Container):
+def delete(c:Container=None):
     with suppress(Exception):
         c.stop()
     cs_logger.info(f" Eliminando {c.tag} '{c.name}'...")
