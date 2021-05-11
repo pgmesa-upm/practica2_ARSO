@@ -86,6 +86,44 @@ def connect_to_networks(c:Container):
         except Exception as err:
             cs_logger.error(err)
     _update_container(c)
+
+# --------------------------------------------------------------------
+def configure_netfile(c:Container):
+    """Genera el fichero de configuracion .yaml del contenedor y lo
+    introduce en la carpeta correspondiente. Tambien desactiva la 
+    configuracion automatica de las network al crear una instancia
+    de ese contenedor (para que permanezca la configuracion del 
+    contenedor original en caso de que se publique una imagen suya)
+    Args:
+        c (Container): Contenedor a configurar
+    """
+    networks = c.networks
+    config_file =("network:\n" +
+                  "    version: 2\n" + 
+                  "    ethernets:\n")
+    for eth in networks:
+        new_eth_config = (f"        {eth}:\n" + 
+                            "            dhcp4: true\n")
+        config_file += new_eth_config
+    msg = (f" Configurando el net_file del {c.tag} '{c.name}'... ")
+    cs_logger.info(msg)
+    cs_logger.debug("\n" + config_file)
+    file_location = "50-cloud-init.yaml"
+    file_location2 = "99-disable-network-config.cfg"
+    with open(file_location, "w") as file:
+        file.write(config_file)
+    path = "/etc/netplan/50-cloud-init.yaml"
+    with open(file_location2, "w") as file:
+        file.write("network: {config: disabled}")
+    path2 = "/etc/cloud/cloud.cfg.d/99-disable-network-config.cfg"
+    push1 = ["lxc","file","push", file_location, f"{c.name}"+path]
+    subprocess.call(push1)
+    push2 = ["lxc","file","push", file_location2, f"{c.name}"+path2]
+    subprocess.call(push2)
+    msg = f" Net del {c.tag} '{c.name}' configurada con exito"
+    cs_logger.info(msg)
+    remove(file_location)
+    remove(file_location2)
     
 # --------------------------------------------------------------------    
 def _update_container(c_to_update:Container, remove:bool=False):
