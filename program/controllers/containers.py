@@ -98,9 +98,9 @@ def configure_netfile(c:Container):
         c (Container): Contenedor a configurar
     """
     networks = c.networks
-    config_file =("network:\n" +
-                  "    version: 2\n" + 
-                  "    ethernets:\n")
+    config_file = ("network:\n" +
+                   "    version: 2\n" + 
+                   "    ethernets:\n")
     for eth in networks:
         new_eth_config = (f"        {eth}:\n" + 
                             "            dhcp4: true\n")
