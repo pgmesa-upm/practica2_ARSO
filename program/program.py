@@ -1,4 +1,5 @@
 
+from program.platform.machines import load_balancer
 from dependencies.utils.tools import pretty
 import re
 import logging
@@ -173,6 +174,7 @@ def check_platform_updates():
     # Volvemos a poner el nvl de logger de antes y nos aseguramos que 
     # el usuario lea los warnings
     root_logger.level = lvl
+    load_balancer.update_haproxycfg()
     if warned:
         print("Se acaban de mostrar warnings importantes que pueden " + 
               "modificar el comportamiento del programa")

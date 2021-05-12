@@ -7,8 +7,8 @@ from program import program
 from program.controllers import containers
 import dependencies.register.register as register
 from dependencies.lxc_classes.container import Container
-from dependencies.utils.tools import objectlist_as_dict
 from dependencies.utils.lxc_functions import checkin_lxclist
+from program.platform.machines import servers
 
 # ---------------------- BALANCEADOR DE CARGA ------------------------
 # --------------------------------------------------------------------
@@ -20,6 +20,10 @@ from dependencies.utils.lxc_functions import checkin_lxclist
 lb_logger = logging.getLogger(__name__)
 # Tag e id de registro para la imagen configurada
 TAG = "load balancer"; IMG_ID = "lb_image" 
+# Algoritmo de balanceo de trafico
+algorithm = "roundrobin"
+# Puerto para que se conecte el cliente
+PORT = 80
 # Imagen por defecto sobre la que se va a realizar la configuracion
 default_image = "ubuntu:18.04"
 # --------------------------------------------------------------------
@@ -152,21 +156,49 @@ def _configure_image() -> str:
 # --------------------------------------------------------------------
 def update_haproxycfg():
     return
+    # Miramos si existen contenedores creados
+    cs = register.load(containers.ID)
+    # Miramos si el lb esta arrancado para actualizar (si no lo 
+    # haremos la proxima vez que arranque) y si lo esta esperamos
+    # a que termine el startup
+    if cs is None: return
+    for c in cs:
+        if c.tag == TAG:
+            if c.state != "RUNNING": 
+                print("no arrancado")
+                return
+            print("esperando..")
+            c.wait_for_startup()
+            print("fin startup")
+    # Procedemos a configurar el fichero de haproxy
     config = (
-        "\nfrontend firstbalance" +
-        "        bind *:80" +
-        "        option forwardfor" +
-        "        default_backend webservers" +
-        "\nbackend webservers" +
-        "        balance roundrobin" +
-        "        server webserver1 s1:8080" +
-        "        server webserver2 s2:8080" +
-        "        server webserver3 s3:8080" +
-        "        server webserver1 s1:8080 check" +
-        "        server webserver2 s2:8080 check" +
-        "        server webserver3 s3:8080 check" +
-        "        option httpchk"
+         "\n\nfrontend firstbalance\n" +
+        f"        bind *:{PORT}\n" +
+         "        option forwardfor\n" +
+         "        default_backend webservers\n" +
+         "backend webservers\n" +
+        f"        balance {algorithm}\n"
     )
-    path = None # Donde se encuentre el fichero haproxy.cfg
-    subprocess.run("lxc", "exec", "lb", "--", config, ">>", path)
+    servs = list(filter(lambda c: c.tag == servers.TAG, cs))
+    for i, s in enumerate(servs):
+        l = f"        server webserver{i+1} {s.name}:{servers.PORT}\n"
+        config += l
+    for i, s in enumerate(servs):
+        l = f"        server webserver{i+1} {s.name}:{servers.PORT} check\n"
+        config += l
+    config += "        option httpchk"
+    print(config)
+    path = "/etc/haproxy/haproxy.cfg"
+    # Leemos la info basica del fichero basic_haproxy.cfg
+    basicfile_path = "program/resources/base_haproxy.cfg"
+    with open(basicfile_path, "r") as file:
+        base_file = file.read()
+    # Juntamos los ficheros
+    configured_file = base_file + config
+    # Creamos el fichero haproxy.cfg lo enviamos al contenedor y
+    # eliminamos el fichero que ya no nos hace falta
+    with open("haproxy.cfg", "w") as file:
+        file.write(configured_file)
+    subprocess.run(["lxc", "file", "push", "haproxy.cfg", "lb/"+f"{path}"])
+    remove("haproxy.cfg")
 # --------------------------------------------------------------------

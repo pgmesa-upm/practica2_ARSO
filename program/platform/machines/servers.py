@@ -16,6 +16,8 @@ from dependencies.utils.tools import objectlist_as_dict
 serv_logger = logging.getLogger(__name__)
 # Tag e id de registro para la imagen configurada
 TAG = "server"; IMG_ID = "s_image"
+# Puerto en que se van a ejecutar
+PORT = 80
 # Imagen por defecto sobre la que se va a realizar la configuracion
 default_image = "ubuntu:18.04"
 # --------------------------------------------------------------------

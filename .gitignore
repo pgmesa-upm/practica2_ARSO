@@ -4,3 +4,4 @@ __pycache__
 .register
 50-cloud-init.yaml
 99-disable-network-config.cfg
+haproxy.cfg
