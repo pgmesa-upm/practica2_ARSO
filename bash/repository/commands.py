@@ -324,7 +324,7 @@ def destruir(options={}, flags=[]):
         cmd_logger.error(msg)
             
 # --------------------------------------------------------------------   
-def show(choice:str, options={}, flags={}):
+def show(options={}, flags={}):
     """Muestra informacion sobre el programa
 
     Args:
@@ -332,11 +332,11 @@ def show(choice:str, options={}, flags={}):
         options (dict, optional): Opciones del comando show
         flags (list, optional): Flags introducidos en el programa
     """
-    if choice == "diagram":
+    if "diagram" in options:
         program.show_platform_diagram()
-    elif choice == "state":
+    elif "state" in options:
         platform.print_state()
-    elif choice == "dependencies":
+    elif "dep" in options:
         program.show_dependencies()
         
 # --------------------------------------------------------------------

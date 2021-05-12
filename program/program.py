@@ -1,4 +1,5 @@
 
+from dependencies.utils.tools import pretty
 import re
 import logging
 import platform as plt
@@ -25,29 +26,50 @@ from .platform import platform
 
 class ProgramError(Exception):
     pass
+
+class Dependency:
+    def __init__(self, name:str, cmd_to_check:str, 
+                 cmd_to_install:str, type_:str):
+        self.name = name
+        self.check_cmd = cmd_to_check
+        self.cmd = cmd_to_install
+        self.type = type_
+    
+    def check(self) -> bool:
+        try:
+            subprocess.run(
+                self.check_cmd.split(" "),
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE
+            )
+            self.installed = True
+        except:
+            self.installed = False
+        return self.installed
+    
+    def __str__(self) -> str:
+        return self.name
 # --------------------------------------------------------------------
 program_logger = logging.getLogger(__name__)
 _dependencies = {}
 # --------------------------------------------------------------------
 def show_platform_diagram():
     """Muestra un diagrama que explica la finalidad del programa"""
-    try:
-        path = "program/resources/images/diagram.png"
-        subprocess.Popen(
-            ["display", path],
-            stdout=subprocess.PIPE
-        ) 
-    except Exception as err:
-        if "display" in str(err):
-            program_logger.error("Se necesita instalar 'imagemagick'")
-        else:
-            program_logger.error(err)
+    if not _dependencies["imagemagick"].check():
+        program_logger.error("Se necesita instalar 'imagemagick'")
+        return
+    path = "program/resources/images/diagram.png"
+    subprocess.Popen(
+        ["display", path],
+        stdout=subprocess.PIPE
+    ) 
         
 def show_dependencies():
-    """Muestra la estructura de ficheros utilizada para este proyecto
-    y sus relaciones. Tambien muestra las dependencias externas a las
-    que esta ligado"""
-    pass
+    """Muestra las dependencias externas a las que esta ligado el
+    programa"""
+    for d in _dependencies.values():
+        d.check()
+        print(pretty(d))
 
 # --------------------------------------------------------------------
 def list_lxc_containers():
@@ -68,7 +90,8 @@ def list_lxc_bridges():
     lxc_network_list()
     
 # --------------------------------------------------------------------   
-def check_enviroment():
+def check_dependencies():
+    global _dependencies
     """Revisa que todas las dependencias externas que necesita el 
     programa se encuentran disponibles en el PC y en caso contrario 
     lanza un error si la dependencia es obligatoria o un warning si
@@ -84,44 +107,48 @@ def check_enviroment():
         err = (" Este programa solo funciona sobre " + 
                         f"Linux -> {system} detectado")
         raise ProgramError(err)
-    try:
-        subprocess.run(
-            ["lxd", "--version"],
-            stderr=subprocess.PIPE,
-            stdout=subprocess.PIPE
-        )
-        subprocess.run(["lxd", "init", "--auto"])
-    except:
+    lxd = Dependency(
+        "lxd", 
+        "lxd --version", 
+        "sudo apt install lxd",
+        "mandatory"
+    )
+    xterm = Dependency(
+        "xterm", 
+        "xterm --version", 
+        "sudo apt install xterm",
+        "optional"
+    )
+    imagemagick = Dependency(
+        "imagemagick", 
+        "convert --version", 
+        "sudo apt install imagemagick",
+        "optional"
+    )
+    _dependencies[lxd.name] = lxd
+    _dependencies[xterm.name] = xterm
+    _dependencies[imagemagick.name] = imagemagick
+    
+    info = ("\nIntroduce 'show dep' para obtener informacion detallada " +
+            "sobre las dependencias externas del programa")
+    if not lxd.check():
         err = (" 'lxd' no esta instalado en este ordenador y es " +
                "necesario para la ejecucion del programa.\nIntroduce " +
-               "'sudo apt install lxd' en la linea de comandos para "
-               "instalarlo")
-        raise ProgramError(err)
-    try:
-        subprocess.run(
-            ["xterm", "--version"],
-            stderr=subprocess.PIPE,
-            stdout=subprocess.PIPE
-        )
-    except:
+               f"'{lxd.cmd}' en la linea de comandos para instalarlo")
+        raise ProgramError(err + info)
+    subprocess.run(["lxd", "init", "--auto"])
+    if not xterm.check():
         warn = (" 'xterm' no esta instalado en este ordenador y " +
-              "algunas funcionalidades pueden requerir este modulo. " + 
-              "Introduce 'sudo apt install xterm' en la linea de " + 
-              "comandos para instalarlo")
-        program_logger.warning(warn)
-    try:
-        subprocess.run(
-            ["convert", "--version"],
-            stderr=subprocess.PIPE,
-            stdout=subprocess.PIPE
-        )
-    except:
+               "algunas funcionalidades pueden requerir este modulo. " + 
+              f"Introduce '{xterm.cmd}' en la linea de comandos para " + 
+               "instalarlo")
+        program_logger.warning(warn + info)
+    if not imagemagick.check():
         warn = (" 'imagemagick' no esta instalado en este ordenador y " +
               "algunas funcionalidades pueden requerir este modulo. " + 
-              "Introduce 'sudo apt install imagemagick' en la linea de " + 
-              "comandos para instalarlo")
-        program_logger.warning(warn)
-
+              f"Introduce '{imagemagick.cmd}' en la linea de comandos" + 
+              "para instalarlo")
+        program_logger.warning(warn + info)
 
 def check_platform_updates():
     """Implementacion para detectar cambios que se hayan podido

@@ -120,13 +120,14 @@ def config_cli() -> Cli:
     _commands[cmd_name] = commands_rep.eliminar
     
     cmd_name = "show"
-    msg = ("<diagram, state or dep> shows information about the program. " + 
-          "'state' shows\n           information about every machine/component " +
-          "of the platform, 'diagram' displays \n           a diagram that " +
-          "explains the structure of the platform and 'dep' shows the " + 
-          "\n           dependencies of the program and if they are fulfilled")
-    show = Command(cmd_name, description=msg, extra_arg=True, 
-                            mandatory=True, choices=["diagram", "state", "dep"])
+    msg = "shows information about the program"
+    show = Command(cmd_name, description=msg, mandatory_opt=True, multi_opt=False)
+    msg = "shows information about every machine/component of the platform"
+    show.add_option("state", description=msg)
+    msg ="displays a diagram that explains the structure of the platform"
+    show.add_option("diagram", description=msg)
+    msg ="shows information about the external dependencies of the program"
+    show.add_option("dep", description=msg)
     cli.add_command(show)
     _commands[cmd_name] = commands_rep.show
     

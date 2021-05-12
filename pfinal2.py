@@ -39,7 +39,7 @@ def main():
         # Configuramos la cantidad de info que se va a mostrar
         _config_verbosity(args_processed["flags"])
         # Realizamos unas comprobaciones previas (ProgramError)
-        program.check_enviroment()
+        program.check_dependencies()
         program.check_platform_updates()
         # Informamos del inicio del programa y ejecutamos la orden
         main_logger.info(" Programa iniciado")

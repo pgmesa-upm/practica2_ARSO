@@ -31,7 +31,7 @@ class Command:
         """
     def __init__(self, name:str, extra_arg:any=False, mandatory=False,
                  multi=False, choices:list=None, default:any=None,
-                 description:str=None):
+                 description:str=None, mandatory_opt=False, multi_opt=True):
         self.name = name
         self.extra_arg = extra_arg
         self.choices = choices
@@ -39,6 +39,8 @@ class Command:
         self.description = description 
         self.mandatory = mandatory
         self.multi = multi
+        self.mandatory_opt = mandatory_opt
+        self.multi_opt = multi_opt
         self.options = {}
    
     def add_option(self, name:str, extra_arg:any=False, mandatory=False, 

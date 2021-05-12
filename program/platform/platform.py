@@ -63,6 +63,8 @@ def print_state():
     (contenedores y bridges)"""
     cs = register.load(register_id=containers.ID)
     bgs = register.load(register_id=bridges.ID)
+    if not is_deployed():
+        print("--> La plataforma esta vacia, no ha sido desplegada")
     print("CONTENEDORES")
     if cs != None:
         for c in cs:

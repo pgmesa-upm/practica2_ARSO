@@ -70,6 +70,19 @@ class Cli:
                         last_index = i + 1
                         ant = arg
                 parts[ant] = args[last_index:]
+                # Comprobamos si puede haber mas de una opcion y si es
+                # obligatorio que haya al menos una
+                option_names = ""
+                for opt in cmd.options.values():
+                    option_names += opt.name + ", "
+                if len(parts) <= 1 and cmd.mandatory_opt: 
+                    err = (f"El comando '{cmd.name}' requiere una opcion " + 
+                           f"extra '{option_names[:-2]}'")
+                    raise CmdLineError(err)
+                elif len(parts) > 2 and not cmd.multi_opt:
+                    err = (f"El comando '{cmd.name}' solo admite una " +
+                           f"opcion extra entre '{option_names[:-2]}'")
+                    raise CmdLineError(err)
                 # Vemos si cada parte es válida y la guardamos en 
                 # un diccionario
                 processed_line = {"cmd": {}, "options": {}, "flags": []}
