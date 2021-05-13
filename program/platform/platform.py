@@ -26,14 +26,17 @@ def update_conexions():
     
     # Si la plataforma no se ha desplegado salimos
     if not is_deployed(): return
+    updates = register.load("updates")
     # Actualizamos los contenedores conectados a los bridges
-    net_devices.update_conexions()
+    if updates.get("cs_num", False):
+        net_devices.update_conexions()
     # Miramos si hay contenedores en el programa (si no hay, ni si
     # quiera el lb, es que los han eliminado desde fuera)
     cs = register.load(containers.ID)
     if cs == None: return
     # Actualizamos los servidores conectados al balanceador de carga
-    load_balancer.update_haproxycfg()
+    if updates.get("cs_state", False):
+        load_balancer.update_haproxycfg()
     # Realizamos las conexiones de los contenedores a los bridge
     bgs = register.load(bridges.ID)
     bgs_dict = objectlist_as_dict(
@@ -56,6 +59,7 @@ def update_conexions():
             if not c.connected_networks["eth0"]:
                 bridges.attach(c.name, bgs_dict["lxdbr1"], "eth0")
         containers.connect_to_networks(c)
+    register.update("updates", {})
         
 # --------------------------------------------------------------------
 def print_state():

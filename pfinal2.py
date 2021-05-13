@@ -5,12 +5,12 @@
 
 import sys
 import logging
-import subprocess
 
 import bash.bash_handler as bash
 from bash.bash_handler import CmdLineError
 from program import program
 from program.program import ProgramError
+from program.platform import platform
  
 # ------------------- MAIN (INICIO DE EJECUCION) ---------------------
 # --------------------------------------------------------------------
@@ -45,6 +45,8 @@ def main():
         main_logger.info(" Programa iniciado")
         main_logger.debug(f" Ejecutando la orden {args_processed}")
         bash.execute(args_processed)
+        # Actualizamos la plataforma
+        platform.update_conexions()
     # Manejamos los errores que puedan surgir 
     except CmdLineError as clErr:
         main_logger.error(f" {clErr}")

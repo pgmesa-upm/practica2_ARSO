@@ -1,6 +1,7 @@
 
 from program.platform.machines import load_balancer
 from dependencies.utils.tools import pretty
+from contextlib import suppress
 import re
 import logging
 import platform as plt
@@ -156,8 +157,9 @@ def check_platform_updates():
     producir en los contenedores y bridges desde fuera del programa
     y actualizar las instancia guardadas en el registro. A partir 
     de las listas que proporciona lxc, se analiza si se han
-    producido cambios que se deban actualizar en el programa"""    
-    
+    producido cambios que se deban actualizar en el programa""" 
+    with suppress(Exception):
+        register.add("updates", {})
     # Cambiamos el nvl del logger para que siempre se muestren los
     # warning
     root_logger = logging.getLogger()
@@ -174,7 +176,6 @@ def check_platform_updates():
     # Volvemos a poner el nvl de logger de antes y nos aseguramos que 
     # el usuario lea los warnings
     root_logger.level = lvl
-    load_balancer.update_haproxycfg()
     if warned:
         print("Se acaban de mostrar warnings importantes que pueden " + 
               "modificar el comportamiento del programa")
@@ -204,6 +205,11 @@ def _check_containers():
                     bg.used_by.remove(c.name)
             program_logger.warning(warn)
             warned = True
+            # Registramos que ha habido cambio en el numero de servidores
+            # y hay que actualizar haproxy
+            register.update("updates", True, override=False, dict_id="cs_num")
+            # Como para hacer delete hay que parar, tambien cambia el estado
+            register.update("updates", True, override=False, dict_id="cs_state") 
             continue
         index = cs_info[headers[0]].index(c.name)
         if c.state != cs_info[headers[1]][index]:
@@ -214,6 +220,7 @@ def _check_containers():
             c.state = new_state
             program_logger.warning(warn)
             warned = True
+            register.update("updates", True, override=False, dict_id="cs_state")
         if c.state == "RUNNING":
             info = cs_info[headers[2]][index]
             current_nets = {}

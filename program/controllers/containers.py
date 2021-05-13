@@ -57,6 +57,7 @@ def stop(c:Container):
 def delete(c:Container=None):
     with suppress(Exception):
         c.stop()
+        _update_container(c) 
     cs_logger.info(f" Eliminando {c.tag} '{c.name}'...")
     c.delete()
     cs_logger.info(f" {c.tag} '{c.name}' eliminado con exito")
@@ -149,6 +150,10 @@ def _update_container(c_to_update:Container, remove:bool=False):
         else:
             cs.append(c_to_update)
         register.update(ID, cs)
+    if remove:
+        register.update("updates", True, override=False, dict_id="cs_num") 
+    else:
+        register.update("updates", True, override=False, dict_id="cs_state") 
 
 def _add_container(c_to_add:Container):
     """Añade un contenedor al registro
@@ -161,5 +166,6 @@ def _add_container(c_to_add:Container):
         register.add(ID, [c_to_add])
     else:
         register.update(ID, c_to_add, override=False)
+    register.update("updates", True, override=False, dict_id="cs_num") 
     
 # --------------------------------------------------------------------

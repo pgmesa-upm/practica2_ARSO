@@ -1,5 +1,6 @@
 
 import logging
+from pickle import load
 
 from .reused_code import target_containers
 from program.controllers import bridges, containers
@@ -46,6 +47,9 @@ def arrancar(*target_cs, options={}, flags=[]):
     if "-t" in flags and len(succesful_cs) > 0:
         c_names = list(map(lambda c: c.name, target_cs))
         term(*c_names, flags=flags)
+    warn = (" Los servicios de los servidores y/o balanceador puede " +
+            "tardar unos cuantos segundos en estar disponibles")
+    cmd_logger.warning(warn)
         
 # --------------------------------------------------------------------
 @target_containers(cmd_logger) 
@@ -122,7 +126,7 @@ def eliminar(*target_cs, options={}, flags=[],
     msg = f" Eliminando contenedores '{concat_array(target_cs)}'..."
     cmd_logger.info(msg)
     succesful_cs = containers.delete(*target_cs)
-    # Actualizamos los contenedores que estan asociados a cada bridge
+    # Actualizamos la plataforma
     platform.update_conexions()
     if not "-q" in flags:
         program.list_lxc_containers()
@@ -182,7 +186,7 @@ def añadir(numServs:int, options={}, flags=[], extra_cs=[]):
             return
     # Creando contenedores 
         # Elegimos la imagen con la que se van a crear
-    simage = servers.default_image
+    simage = None
     if "--image" in options:
         simage = options["--image"][0]
     if "--simage" in options:
@@ -213,8 +217,8 @@ def añadir(numServs:int, options={}, flags=[], extra_cs=[]):
     cs_s = concat_array(successful_cs)
     msg = (f" Contenedores '{cs_s}' inicializados\n")
     cmd_logger.info(msg)
-    if len(successful_cs) != 0:     
-        # Estableciendo conexiones
+    if len(successful_cs) != 0:  
+        # Actualizamos la plataforma
         cmd_logger.info(" Estableciendo conexiones " +
                                 "entre contenedores y bridges...")
         platform.update_conexions()
@@ -262,7 +266,11 @@ def crear(numServs:int, options={}, flags=[]):
         lbimage = options["--lbimage"][0]
     if "--climage" in options:
         climage = options["--climage"][0]
-    lb = load_balancer.get_lb(image=lbimage)
+    # Elegimos el algoritmo del lb
+    algorithm = None
+    if "--balance" in options:
+        algorithm = options["--balance"][0]
+    lb = load_balancer.get_lb(image=lbimage, balance=algorithm)
     cl = clients.get_client(image=climage)
     añadir(numServs, options=options, flags=flags, extra_cs=[lb, cl]) 
     cmd_logger.info(" Plataforma de servidores desplegada")
@@ -317,6 +325,7 @@ def destruir(options={}, flags=[]):
     cs = register.load(containers.ID)
     bgs = register.load(bridges.ID) 
     if cs == None and bgs == None:
+        register.remove("updates")
         cmd_logger.info(" Plataforma destruida")
     else:
         msg = (" Plataforma destruida parcialmente " +

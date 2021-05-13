@@ -1,6 +1,4 @@
 
-import logging
-
 import bash.repository.commands as commands_rep
 from dependencies.cli.cli import Cli, CmdLineError
 from dependencies.cli.aux_classes import Command, Flag
@@ -67,6 +65,9 @@ def config_cli() -> Cli:
     crear.add_option("--lbimage", description=msg, extra_arg=True, mandatory=True)
     msg = "<alias or fingerprint> allows to specify the image of the client"
     crear.add_option("--climage", description=msg, extra_arg=True, mandatory=True)
+    msg = ("allows to specify the balance algorithm of the load balancer " + 
+           "(default -> roundrobin)")
+    crear.add_option("--balance", description=msg, extra_arg=True, mandatory=True)
     cli.add_command(crear)
     _commands[cmd_name] = commands_rep.crear
     

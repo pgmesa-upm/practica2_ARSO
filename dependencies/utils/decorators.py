@@ -1,5 +1,6 @@
 
 import logging
+from math import floor
 from logging import Logger
 from time import time
 
@@ -11,7 +12,8 @@ from time import time
 
 # --------------------------------------------------------------------
 def timer(func):
-    """Mide el tiempo que tarda en ejecutarse una funcion
+    """Mide el tiempo que tarda en ejecutarse una funcion en minutos 
+    y segundos
 
     Args:
         func: funcion a ejecutar
@@ -22,7 +24,13 @@ def timer(func):
         func(*a,**ka)
         tf = time()
         if root_logger.level <= logging.WARNING:
-            print(f"Elapsed time: {round(tf-t0, 2)} s")
+            total_secs = round(tf-t0, 2)
+            if total_secs < 60:
+                print(f"Elapsed time: {total_secs} s")
+            else: 
+                mins = floor(total_secs/60)
+                secs = int(total_secs - mins*60)
+                print(f"Elapsed time: {mins} min {secs} s")
     return f
 
 # -------------------------------------------------------------------- 
