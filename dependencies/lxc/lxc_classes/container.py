@@ -28,7 +28,7 @@ class Container:
         self.networks = {}
         self.connected_networks = {}
         
-    def _run(self, cmd:list):
+    def run(self, cmd:list, inside=False):
         """Ejecuta un comando mediante subprocess y controla los 
         errores que puedan surgir. Espera a que termine el proceso
         (Llamada bloqueante)
@@ -39,6 +39,8 @@ class Container:
         Raises:
             LxcError: Si surge algun error ejecutando el comando
         """
+        if inside:
+            cmd = ["lxc","exec",self.name,"--"] + cmd
         process = subprocess.run(
             cmd, 
             stderr=subprocess.PIPE,
@@ -74,7 +76,7 @@ class Container:
             raise LxcError(err)
         cmd = ["lxc","config","device","set", self.name,
                 eth, "ipv4.address", self.networks[eth]]
-        self._run(cmd)
+        self.run(cmd)
         self.connected_networks[eth] = True
     
     def open_terminal(self):
@@ -103,7 +105,7 @@ class Container:
             err = (f" {self.tag} '{self.name}' esta '{self.state}' " +
                                 "y no puede ser inicializado de nuevo")
             raise LxcError(err)
-        self._run(["lxc", "init", self.container_image, self.name])  
+        self.run(["lxc", "init", self.container_image, self.name])  
         self.state = STOPPED
         # Se limitan los recursos del contenedor 
         limits = {
@@ -113,7 +115,7 @@ class Container:
         }
         for l in limits: 
             with suppress(LxcError):
-                self._run(["lxc", "config", "set", self.name] + limits[l])
+                self.run(["lxc", "config", "set", self.name] + limits[l])
                 
     def wait_for_startup(self):
         """Espera a que el contenedor haya terminado de arrancarse
@@ -134,6 +136,33 @@ class Container:
             )
             state = process.stdout.decode().strip()
     
+    def update_apt(self):
+        self.wait_for_startup()
+        self.run(["apt","update"], inside=True)
+    
+    def install(self, module:str):
+        self.wait_for_startup()
+        self.run(["apt","install","-y",module], inside=True)
+    
+    def publish(self, alias:str=None):
+        if self.state != STOPPED:
+            err = (f" {self.tag} '{self.name}' debe estar parado para " + 
+                   "publicar su imagen")
+            raise LxcError(err)
+        cmd = ["lxc", "publish", self.name]
+        if alias is not None:
+            cmd = cmd + ["--alias", alias]
+        self.run(cmd)
+
+    def push(self, file:str, to_path:str):
+        self.wait_for_startup()
+        if to_path.startswith("/"):
+            to_path = to_path[1:]
+        if to_path.endswith("/"):
+            to_path = to_path[:-1]
+        c_path = f"{self.name}/{to_path}/{file}"
+        self.run(["lxc", "file", "push", file, c_path])
+     
     def start(self):
         """Arranca el contenedor
 
@@ -148,7 +177,7 @@ class Container:
             err = (f" {self.tag} '{self.name}' esta " +
                         f"'{self.state}' y no puede ser arrancado")
             raise LxcError(err)
-        self._run(["lxc", "start", self.name])  
+        self.run(["lxc", "start", self.name])  
         self.state = RUNNING
         
     def stop(self):
@@ -165,7 +194,7 @@ class Container:
             err = (f" {self.tag} '{self.name}' esta " +
                         f"'{self.state}' y no puede ser detenido")
             raise LxcError()
-        self._run(["lxc", "stop", self.name, "--force"])  
+        self.run(["lxc", "stop", self.name, "--force"])  
         self.state = STOPPED
         
     def delete(self):
@@ -178,7 +207,7 @@ class Container:
             err = (f" {self.tag} '{self.name}' esta " +
                         f"'{self.state}' y no puede ser eliminado")
             raise LxcError(err)
-        self._run(["lxc", "delete", self.name])  
+        self.run(["lxc", "delete", self.name])  
         self.state = DELETED
     
     def pause(self):
@@ -195,7 +224,7 @@ class Container:
             err = (f" {self.tag} '{self.name}' esta " +
                         f"'{self.state}' y no puede ser pausado")
             raise LxcError(err)
-        self._run(["lxc", "pause", self.name])  
+        self.run(["lxc", "pause", self.name])  
         self.state = FROZEN
     
     def __str__(self):

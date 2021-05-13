@@ -1,6 +1,6 @@
 import logging
 
-from dependencies.lxc_classes.container import Container
+from dependencies.lxc.lxc_classes.container import Container
 
 # --------------------------- SERVIDORES -----------------------------
 # --------------------------------------------------------------------

@@ -1,14 +1,15 @@
 
-import subprocess
 import logging
-from os import pipe, remove
+from os import remove
 
 from program.controllers import containers
+from program.controllers.containers import LxcError
 import dependencies.register.register as register
-from dependencies.lxc_classes.container import Container
-from dependencies.utils.lxc_functions import (
+from dependencies.lxc.lxc_classes.container import Container
+from dependencies.lxc.lxc_functions import (
     checkin_lxclist,
-    lxclist_as_dict
+    lxc_image_list,
+    process_lxclist
 )
 from program.platform.machines import servers
 
@@ -54,12 +55,8 @@ def get_lb(image:str=None, balance=None) -> Container:
             lb_logger.debug(msg)
             if checkin_lxclist(["lxc", "image", "list"], 1, fgp):
                 # Vemos el alias de la imagen por si se ha modificado 
-                process = subprocess.run(
-                    ["lxc","image","list"],
-                    stdout=subprocess.PIPE
-                )
-                lista = process.stdout.decode()
-                images = lxclist_as_dict(lista)
+                l = lxc_image_list()
+                images = process_lxclist(l)
                 headers = list(images.keys())
                 alias = ""
                 for i, fg in enumerate(images[headers[1]]):
@@ -114,26 +111,14 @@ def _config_image() -> str:
     lb_logger.info(f" Lanzando '{name}'...")
     lb_c.init(); lb_c.start()
     lb_logger.info(" Instalando haproxy (puede tardar)...")
-    lb_c.wait_for_startup()
-    process = subprocess.run(
-        ["lxc","exec",name,"--","apt","update"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
-    )
-    process = subprocess.run(
-        ["lxc","exec",name,"--","apt","install","-y","haproxy"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
-    )
-    if process.returncode == 0:
-        lb_logger.info(" Haproxy instalado con exito")
-        lb_logger.info(" Iniciando haproxy...")
-        subprocess.run(
-            ["lxc","exec",name,"--","service","haproxy","start"]
-        ) 
-        lb_logger.info(" Haproxy iniciado")  
-    else:
-        lb_logger.error(" Fallo al instalar haproxy")
+    try:
+        lb_c.update_apt()
+        lb_c.install("haproxy")
+        lb_c.run(["service","haproxy","start"], inside=True)
+    except LxcError as err:
+        err_msg = " Fallo al instalar haproxy - error de lxc: " + err
+        lb_logger.error(err_msg)
+        return default_image
     # Configuramos el netfile
     lb_c.add_to_network("eth0", "10.0.0.10")
     lb_c.add_to_network("eth1", "10.0.1.10")
@@ -147,20 +132,13 @@ def _config_image() -> str:
     # Una vez el alias es valido publicamos la imagen
     msg = f" Publicando la imagen del lb con alias '{alias}'..."
     lb_logger.info(msg)
-    lb_c.stop()
-    process = subprocess.run(
-        ["lxc", "publish", name, "--alias", alias],
-        stdout=subprocess.PIPE
-    )
+    lb_c.stop(); lb_c.publish(alias=alias)
     lb_logger.info(" Imagen base del balanceador creada\n")
     # Eliminamos el contenedor
     lb_c.delete()
     # Guardamos la imagen en el registro y la devolvemos
-    process = subprocess.run(
-        ["lxc","image","list"],
-        stdout=subprocess.PIPE
-    )
-    images = lxclist_as_dict(process.stdout.decode())
+    l = lxc_image_list()
+    images = process_lxclist(l)
     headers = list(images.keys())
     fingerprint = ""
     for i, al in enumerate(images[headers[0]]):
@@ -213,7 +191,7 @@ def update_haproxycfg():
         config += l
     config += "        option httpchk"
     lb_logger.debug(config)
-    path = "/etc/haproxy/haproxy.cfg"
+    path = "/etc/haproxy/"; file_name= "haproxy.cfg"
     # Leemos la info basica del fichero basic_haproxy.cfg
     basicfile_path = "program/resources/base_haproxy.cfg"
     with open(basicfile_path, "r") as file:
@@ -222,25 +200,14 @@ def update_haproxycfg():
     configured_file = base_file + config
     # Creamos el fichero haproxy.cfg lo enviamos al contenedor y
     # eliminamos el fichero que ya no nos hace falta
-    with open("haproxy.cfg", "w") as file:
+    with open(file_name, "w") as file:
         file.write(configured_file)
-    subprocess.run(
-        ["lxc", "file", "push", "haproxy.cfg", "lb/"+f"{path}"],
-        stdout=subprocess.PIPE
-    )
-    process = subprocess.run(
-         ["lxc", "exec", "lb", "--", "haproxy", "-f", path, "-c"],
-         stdout=subprocess.PIPE,
-         stderr=subprocess.PIPE
-    )
-    if process.returncode == 0:
+    lb.push(file_name, path)
+    try:
+        lb.run(["haproxy", "-f", path+file_name, "-c"], inside=True)
+        lb.run(["service","haproxy","restart"], inside=True)
         lb_logger.info(" Fichero haproxy actualizado con exito")
-        subprocess.run(
-            ["lxc","exec",lb.name,"--","service","haproxy","restart"],
-            stdout=subprocess.PIPE
-        )
-    else: 
-        err = process.stderr.decode()
+    except LxcError as err:
         err_msg = f" Fallo al configurar el fichero haproxy: {err}" 
         lb_logger.error(err_msg)
     remove("haproxy.cfg")

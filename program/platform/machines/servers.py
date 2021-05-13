@@ -1,14 +1,14 @@
 
 import logging
-import subprocess
 
 from program.controllers import containers
 import dependencies.register.register as register
-from dependencies.lxc_classes.container import Container
+from dependencies.lxc.lxc_classes.container import Container
 from dependencies.utils.tools import objectlist_as_dict
-from dependencies.utils.lxc_functions import (
+from dependencies.lxc.lxc_functions import (
     checkin_lxclist,
-    lxclist_as_dict
+    lxc_image_list,
+    process_lxclist
 )
 # --------------------------- SERVIDORES -----------------------------
 # --------------------------------------------------------------------
@@ -51,12 +51,8 @@ def get_servers(num:int, *names, image:str=None) -> list:
             serv_logger.debug(msg)
             if checkin_lxclist(["lxc", "image", "list"], 1, fgp):
                 # Vemos el alias de la imagen por si se ha modificado 
-                process = subprocess.run(
-                    ["lxc","image","list"],
-                    stdout=subprocess.PIPE
-                )
-                lista = process.stdout.decode()
-                images = lxclist_as_dict(lista)
+                l = lxc_image_list()
+                images = process_lxclist(l)
                 headers = list(images.keys())
                 alias = ""
                 for i, fg in enumerate(images[headers[1]]):
@@ -115,21 +111,13 @@ def _config_image():
     serv_logger.info(f" Lanzando '{name}'...")
     serv.init(); serv.start()
     serv_logger.info(" Instalando tomcat8 (puede tardar)...")
-    serv.wait_for_startup()
-    process = subprocess.run(
-        ["lxc","exec",name,"--","apt","update"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
-    )
-    process = subprocess.run(
-        ["lxc","exec",name,"--","apt","install","-y","tomcat8"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
-    )
-    if process.returncode == 0:
+    serv.update_apt()
+    try:
+        serv.install("tomcat8")
         serv_logger.info(" Tomcat8 instalado con exito")
-    else:
+    except:
         serv_logger.error(" Fallo al instalar tomcat8")
+        return default_image
     # Vemos que no existe una imagen con el alias que vamos a usar
     alias = "tomcat8_serv"
     k = 1
@@ -140,21 +128,14 @@ def _config_image():
     msg = (f" Publicando imagen base de servidores " + 
            f"con alias '{alias}'...")
     serv_logger.info(msg)
-    serv.stop()
-    process = subprocess.run(
-        ["lxc", "publish", name, "--alias", alias],
-        stdout=subprocess.PIPE
-    )
+    serv.stop(); serv.publish(alias=alias)
     serv_logger.info(" Imagen base de servidores creada\n")
     # Eliminamos el contenedor
     serv.delete()
     # Guardamos la imagen en el registro y la devolvemos 
     # (obtenemos tambien la huella que le ha asignado lxc)
-    process = subprocess.run(
-        ["lxc","image","list"],
-        stdout=subprocess.PIPE
-    )
-    images = lxclist_as_dict(process.stdout.decode())
+    l = lxc_image_list()
+    images = process_lxclist(l)
     headers = list(images.keys())
     fingerprint = ""
     for i, al in enumerate(images[headers[0]]):

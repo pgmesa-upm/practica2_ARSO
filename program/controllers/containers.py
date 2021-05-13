@@ -1,13 +1,11 @@
 
 import logging
-import subprocess
-from time import sleep
 from os import remove
 from contextlib import suppress
 
 import dependencies.register.register as register
 from dependencies.utils.decorators import catch_foreach
-from dependencies.lxc_classes.container import Container, LxcError
+from dependencies.lxc.lxc_classes.container import Container, LxcError
 
 # ------------------ CONTROLADOR DE CONTENEDORES ---------------------
 # --------------------------------------------------------------------
@@ -109,22 +107,20 @@ def configure_netfile(c:Container):
     msg = (f" Configurando el net_file del {c.tag} '{c.name}'... ")
     cs_logger.info(msg)
     cs_logger.debug("\n" + config_file)
-    file_location = "50-cloud-init.yaml"
-    file_location2 = "99-disable-network-config.cfg"
-    with open(file_location, "w") as file:
+    file1= "50-cloud-init.yaml"
+    file2 = "99-disable-network-config.cfg"
+    with open(file1, "w") as file:
         file.write(config_file)
-    path = "/etc/netplan/50-cloud-init.yaml"
-    with open(file_location2, "w") as file:
+    path1 = "etc/netplan"
+    with open(file2, "w") as file:
         file.write("network: {config: disabled}")
-    path2 = "/etc/cloud/cloud.cfg.d/99-disable-network-config.cfg"
-    push1 = ["lxc","file","push", file_location, f"{c.name}"+path]
-    subprocess.call(push1)
-    push2 = ["lxc","file","push", file_location2, f"{c.name}"+path2]
-    subprocess.call(push2)
+    path2 = "etc/cloud/cloud.cfg.d"
+    c.push(file1, path1)
+    c.push(file2, path2)
     msg = f" Net del {c.tag} '{c.name}' configurada con exito"
     cs_logger.info(msg)
-    remove(file_location)
-    remove(file_location2)
+    remove(file1)
+    remove(file2)
     
 # --------------------------------------------------------------------    
 def _update_container(c_to_update:Container, remove:bool=False):

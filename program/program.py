@@ -8,10 +8,10 @@ import platform as plt
 import subprocess
 from functools import reduce
 
-from dependencies.utils.lxc_functions import (
+from dependencies.lxc.lxc_functions import (
     lxc_list, 
     lxc_network_list,
-    lxclist_as_dict
+    process_lxclist
 )
 import program.controllers.bridges as bridges
 import program.controllers.containers as containers
@@ -61,10 +61,7 @@ def show_platform_diagram():
         program_logger.error("Se necesita instalar 'imagemagick'")
         return
     path = "program/resources/images/diagram.png"
-    subprocess.Popen(
-        ["display", path],
-        stdout=subprocess.PIPE
-    ) 
+    subprocess.Popen(["display", path],stdout=subprocess.PIPE) 
         
 def show_dependencies():
     """Muestra las dependencias externas a las que esta ligado el
@@ -84,12 +81,12 @@ def list_lxc_containers():
         total = running+frozen
         ips = reduce(lambda acum, c: acum+len(c.networks), total, 0)
     try:
-        lxc_list(ips_to_wait=ips)
+        lxc_list(ips_to_wait=ips, print_=True)
     except Exception as err:
         program_logger.error(err)
 
 def list_lxc_bridges():
-    lxc_network_list()
+    lxc_network_list(print_=True)
     
 # --------------------------------------------------------------------   
 def check_dependencies():
@@ -187,13 +184,8 @@ def _check_containers():
     cs_object = register.load(containers.ID)
     bgs = register.load(bridges.ID)
     if cs_object is None: return False
-    
-    process = subprocess.run(
-        ["lxc", "list"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
-    )
-    cs_info = lxclist_as_dict(process.stdout.decode())
+    l = lxc_list()
+    cs_info = process_lxclist(l)
     headers = list(cs_info.keys())
     cs_updated = []
     for c in cs_object:
@@ -275,12 +267,8 @@ def _check_bridges():
     warned = False
     bgs = register.load(bridges.ID)
     if bgs is None: return False
-    process = subprocess.run(
-        ["lxc", "network", "list"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
-    )
-    bgs_info = lxclist_as_dict(process.stdout.decode())
+    l = lxc_network_list()
+    bgs_info = process_lxclist(l)
     headers = list(bgs_info.keys())
     bgs_updated = []
     for bg in bgs:

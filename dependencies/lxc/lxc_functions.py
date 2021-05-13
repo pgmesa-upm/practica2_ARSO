@@ -7,39 +7,61 @@ def checkin_lxclist(list_cmd:list, colum:int, val:str):
         list_cmd,
         stdout=subprocess.PIPE
     )
-    table = lxclist_as_dict(process.stdout.decode())
+    table = process_lxclist(process.stdout.decode())
     headers = list(table.keys())
     if val in table[headers[colum]]:
         return True
     return False
 
-def lxc_list(ips_to_wait:int=0, time_out=10):
+def lxc_list(ips_to_wait:int=0, time_out=10, print_=False):
     """Se encarga de mostrar la lista de contenedores de lxc, pero 
     en caso de estar arrancados, como la ip tarda un rato en
     aparecer, la funcion espera a que se haya cargado toda la
     informacion para mostrar la lista. Comprueba que todas las ips
     hayan aparecido"""
     if ips_to_wait == 0:
-        subprocess.call(["lxc", "list"]) 
-        return
-    
-    salida, t, twait= "", 0, 0.1
-    while not salida.count(".") == 3*ips_to_wait:
-        sleep(twait); t += twait
-        if t >= time_out:
-            err = (" timeout de 'lxc list', no se pudieron cargar " + 
-                   "todas las ips")
-            raise Exception(err)
-        out = subprocess.Popen(["lxc", "list"], stdout=subprocess.PIPE) 
-        salida = out.stdout.read().decode()
-        salida = salida[:-1] # Eliminamos el ultimo salto de linea
-    print(salida)
+        p = subprocess.run(["lxc", "list"], stdout=subprocess.PIPE)
+        salida = p.stdout.decode()
+    else:
+        salida, t, twait= "", 0, 0.1
+        while not salida.count(".") == 3*ips_to_wait:
+            sleep(twait); t += twait
+            if t >= time_out:
+                err = (" timeout de 'lxc list', no se pudieron " + 
+                        "cargar todas las ips")
+                raise Exception(err)
+            out = subprocess.Popen(
+                ["lxc", "list"], 
+                stdout=subprocess.PIPE
+            ) 
+            salida = out.stdout.read().decode()
+            salida = salida[:-1] # Eliminamos el ultimo salto de linea
+    if print_:
+        print(salida)
+    return salida
 
-def lxc_network_list():
+def lxc_image_list(print_=False):
+    l = subprocess.run(
+        ["lxc", "image", "list"],
+        stdout=subprocess.PIPE
+    )
+    out = l.stdout.decode()
+    if print_:
+        print(out)
+    return out
+
+def lxc_network_list(print_=False):
     """Muestra la network list de lxc (bridges creados)"""
-    subprocess.call(["lxc", "network", "list"])
+    l = subprocess.run(
+        ["lxc", "network", "list"],
+        stdout=subprocess.PIPE
+    )
+    out = l.stdout.decode()
+    if print_:
+        print(out)
+    return out
     
-def lxclist_as_dict(string:str) -> dict:
+def process_lxclist(string:str) -> dict:
     """Analiza una lista de lxc y proporciona toda su informacion 
     en forma de diccionario para que sea facilmente accesible.
     CUIDADO: Los headers de la lista dependen del idioma en el que

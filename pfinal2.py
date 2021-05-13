@@ -11,6 +11,7 @@ from bash.bash_handler import CmdLineError
 from program import program
 from program.program import ProgramError
 from program.platform import platform
+from dependencies.utils.decorators import timer
  
 # ------------------- MAIN (INICIO DE EJECUCION) ---------------------
 # --------------------------------------------------------------------
@@ -30,6 +31,7 @@ from program.platform import platform
 logging.basicConfig(level=logging.NOTSET)
 main_logger = logging.getLogger(__name__)
 # --------------------------------------------------------------------
+@timer
 def main():
     cli = bash.config_cli()
     try:
@@ -38,11 +40,11 @@ def main():
         if args_processed == None: return
         # Configuramos la cantidad de info que se va a mostrar
         _config_verbosity(args_processed["flags"])
+        main_logger.info(" Programa iniciado")
         # Realizamos unas comprobaciones previas (ProgramError)
         program.check_dependencies()
         program.check_platform_updates()
-        # Informamos del inicio del programa y ejecutamos la orden
-        main_logger.info(" Programa iniciado")
+        # Ejecutamos la orden
         main_logger.debug(f" Ejecutando la orden {args_processed}")
         bash.execute(args_processed)
         # Actualizamos la plataforma

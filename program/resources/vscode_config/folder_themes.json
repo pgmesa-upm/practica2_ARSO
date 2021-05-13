@@ -1,6 +1,6 @@
 {
     "material-icon-theme.folders.associations": {
-    
+
         "program": "Environment",
         "dependencies": "Database",
         "bash": "React-components",
@@ -9,10 +9,11 @@
         "cli": "Pipe",
         "register": "Dump",
         "utils": "Tools",
-        "lxc_classes": "Docker",
+        "lxc_classes": "Class",
         "vscode_config": "vscode",
         "platform": "Expo",
-        "machines": "Serverless"
-
+        "machines": "Serverless",
+        "lxc": "Docker"
+        
     }
 }

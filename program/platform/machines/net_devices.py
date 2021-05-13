@@ -1,7 +1,7 @@
 
 from dependencies.register import register
 from program.controllers import containers, bridges
-from dependencies.lxc_classes.bridge import Bridge
+from dependencies.lxc.lxc_classes.bridge import Bridge
 
 # ----------------------- DISPOSITIVOS DE RED ------------------------
 # --------------------------------------------------------------------

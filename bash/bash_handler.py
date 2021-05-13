@@ -2,7 +2,6 @@
 import bash.repository.commands as commands_rep
 from dependencies.cli.cli import Cli, CmdLineError
 from dependencies.cli.aux_classes import Command, Flag
-from dependencies.utils.decorators import timer
 
 # --------------------------- BASH HANDLER ---------------------------
 # --------------------------------------------------------------------
@@ -13,7 +12,6 @@ from dependencies.utils.decorators import timer
 # En este diccionario se asocia a cada comando una funcion a ejecutar
 _commands = {}
 # --------------------------------------------------------------------
-@timer
 def execute(args:dict):
     """Ejecuta la funcion correspondiente al comando introducido por 
     el usuario
