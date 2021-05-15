@@ -95,7 +95,7 @@ class Cli:
                         key = "cmd"
                     checked_cmd = self._check_command(command, params)
                     dict_page = {command.name: checked_cmd}
-                    processed_line[key] = dict_page
+                    processed_line[key].update(dict_page)
                 processed_line["flags"] = inFlags
                 return processed_line
         raise CmdLineError(f"El comando '{args[0]}' no se reconoce")

@@ -1,4 +1,5 @@
 
+from dependencies.lxc.lxc_classes.container import Container
 import logging
 from pickle import load
 
@@ -8,7 +9,7 @@ from program.platform.machines import (
     servers, 
     load_balancer, 
     net_devices,
-    clients,
+    client,
     data_base
 )
 from program import program
@@ -92,10 +93,10 @@ def pausar(*target_cs, options={}, flags=[]):
 # --------------------------------------------------------------------
 @target_containers(cmd_logger) 
 def eliminar(*target_cs, options={}, flags=[],
-            skip_tags=[load_balancer.TAG, clients.TAG]): 
+            skip_tags=[load_balancer.TAG, data_base.TAG]): 
     """Elimina los contenedores que se enceuntren en target_cs.
     Por defecto, esta funcion solo elimina los contenedores que 
-    sean servidores
+    sean servidores o clientes
 
     Args:
         options (dict, optional): Opciones del comando eliminar
@@ -109,15 +110,15 @@ def eliminar(*target_cs, options={}, flags=[],
         valid_cs = []
         for c in target_cs:
             if c.tag in skip_tags:
-                msg = (f" El contenedor '{c}' no es un servidor " + 
-                        "(solo se pueden eliminar servidores)")
+                msg = (f" El contenedor '{c}' no se puede eliminar " + 
+                        "(solo servidores o clientes)")
                 cmd_logger.error(msg)  
                 continue
             valid_cs.append(c)
         if len(valid_cs) == 0: return
         target_cs = valid_cs
     if not "-f" in flags:
-        print("Se eliminaran los servidores:" +
+        print("Se eliminaran los contenedores:" +
                     f" '{concat_array(target_cs)}'")
         answer = str(input("¿Estas seguro?(y/n): "))
         if answer.lower() != "y":
@@ -154,7 +155,7 @@ def term(*target_cs, options={}, flags=[]):
     cmd_logger.info(msg)
     
     # --------------------------------------------------------------------
-def añadir(numServs:int, options={}, flags=[], extra_cs=[]):
+def añadir(num:int, options={}, flags=[], extra_cs=[]):
     """Añade el numero de contenedores especificados a la plataforma
     de servidores. Por defecto solo añade contenedores que sean del
     tipo servidor, pero en extra_cs se pueden especificar contenedores 
@@ -175,35 +176,56 @@ def añadir(numServs:int, options={}, flags=[], extra_cs=[]):
         cmd_logger.error(msg)
         return
     existent_cs = register.load(containers.ID)
-    if existent_cs != None:
-        ex_s = filter(lambda cs: cs.tag == servers.TAG, existent_cs)
-        num = len(list(ex_s))
-        if num + numServs > 5: 
-            msg = (f" La plataforma no admite mas de 5 servidores. " +
-                    f"Actualmente existen {num}, no se " +
-                            f"puede añadir {numServs} mas")
+    if "-cl" in options:
+        if existent_cs != None:
+            cl_list = list(filter(lambda cs: cs.tag == client.TAG, existent_cs))
+            if len(cl_list) > 0:
+                msg = (f" La plataforma no admite mas de 1 contenedor cliente. " +
+                        f"Ya hay un cliente creado -> '{cl_list[0].name}'")
+                cmd_logger.error(msg)
+                return
+        if num > 1:
+            msg = (f" La plataforma no admite mas de 1 contenedor cliente")
             cmd_logger.error(msg)
             return
-    # Creando contenedores 
-        # Elegimos la imagen con la que se van a crear
-    simage = None
-    if "--image" in options:
-        simage = options["--image"][0]
-    if "--simage" in options:
-        simage = options["--simage"][0]
-        
-    if "--name" in options:   
-        names = options["--name"]
-        cs = extra_cs + servers.get_servers(
-            numServs, 
-            *names, 
-            image=simage
-        )
+        climage = None
+        if "--image" in options:
+            climage = options["--image"][0]
+        if "--name" in options:
+            cl = client.get_client(name=options["--name"][0],image=climage)
+        else:
+            cl = client.get_client(image=climage)
+        cs = [cl]
     else:
-        cs = extra_cs + servers.get_servers(
-            numServs,
-            image=simage
-        )
+        if existent_cs != None:
+            ex_s = filter(lambda cs: cs.tag == servers.TAG, existent_cs)
+            n = len(list(ex_s))
+            if n + num > 5: 
+                msg = (f" La plataforma no admite mas de 5 servidores. " +
+                        f"Actualmente existen {n}, no se " +
+                                f"puede añadir {num} mas")
+                cmd_logger.error(msg)
+                return
+        # Elegimos la imagen con la que se van a crear los servidores
+        simage = None
+        if "--image" in options:
+            simage = options["--image"][0]
+        if "--simage" in options:
+            simage = options["--simage"][0]
+            
+        if "--name" in options:   
+            names = options["--name"]
+            cs = extra_cs + servers.get_servers(
+                num, 
+                *names, 
+                image=simage
+            )
+        else:
+            cs = extra_cs + servers.get_servers(
+                num,
+                image=simage
+            )
+    # Creando contenedores 
     cs_s = concat_array(cs)
     msg = f" Nombre de contenedores (objetos) --> '{cs_s}'"
     cmd_logger.debug(msg)
@@ -257,22 +279,31 @@ def crear(numServs:int, options={}, flags=[]):
     bgs_s = concat_array(succesful_bgs)
     cmd_logger.info(f" Bridges '{bgs_s}' creados\n")
     # Creando contenedores
-        # Elegimos la imagen con la que se van a crear
-    lbimage = None; climage = None
+    lbimage = None; climage = None; extra = []
     if "--image" in options:
         lbimage = options["--image"][0]
         climage = options["--climage"][0]
+    # Configurmaos balanceador
     if "--lbimage" in options:
         lbimage = options["--lbimage"][0]
-    if "--climage" in options:
-        climage = options["--climage"][0]
-    # Elegimos el algoritmo del lb
     algorithm = None
     if "--balance" in options:
         algorithm = options["--balance"][0]
     lb = load_balancer.get_lb(image=lbimage, balance=algorithm)
-    cl = clients.get_client(image=climage)
-    añadir(numServs, options=options, flags=flags, extra_cs=[lb, cl]) 
+    extra.append(lb)
+    # Configurmaos clientes
+    if "--client" in options:
+        if "--climage" in options:
+            climage = options["--climage"][0]
+        try:
+            name = options["--client"][0]
+            cl = client.get_client(name=name, image=climage)
+        except IndexError:
+            cl = client.get_client(image=climage)        
+        extra.append(cl)
+    # Añadimos todos los contenedores a la plataforma (En añadir se
+    # configuran los clientes)
+    añadir(numServs, options=options, flags=flags, extra_cs=extra) 
     cmd_logger.info(" Plataforma de servidores desplegada")
 
 # --------------------------------------------------------------------

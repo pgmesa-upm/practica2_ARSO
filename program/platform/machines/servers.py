@@ -10,6 +10,7 @@ from dependencies.lxc.lxc_functions import (
     lxc_image_list,
     process_lxclist
 )
+from program.platform import platform
 # --------------------------- SERVIDORES -----------------------------
 # --------------------------------------------------------------------
 # Este fichero se encarga de proporcionar funciones para crear y 
@@ -39,40 +40,17 @@ def get_servers(num:int, *names, image:str=None) -> list:
         list: lista de objetos de tipo Contenedor (servidores)
     """
     # Comprobamos que si hace falta configurar una imagen base para
-    # el balanceador o ya se ha creado antes y esta disponible
-    if image == None:
-        img_saved = register.load(IMG_ID)
-        if img_saved is None:
+    # los servidores o ya nos han pasado una o se ha creado antes 
+    # y esta disponible 
+    if image is None:
+        if platform.is_imageconfig_needed(IMG_ID):
             image = _config_image()
         else:
-            # Comprobamos que la imagen no se haya borrado en lxc
-            fgp = img_saved["fingerprint"]
-            msg = f" Imagen anterior guardada de servidores '{fgp}'"
-            serv_logger.debug(msg)
-            if checkin_lxclist(["lxc", "image", "list"], 1, fgp):
-                # Vemos el alias de la imagen por si se ha modificado 
-                l = lxc_image_list()
-                images = process_lxclist(l)
-                headers = list(images.keys())
-                alias = ""
-                for i, fg in enumerate(images[headers[1]]):
-                    if fg == fgp:
-                        alias = images[headers[0]][i]
-                        break
-                image_info = {"alias": alias, "fingerprint": fgp}
-                register.update(IMG_ID, image_info, override=True)
-                image = alias
-                if alias == "": image = fgp
-                msg = (" Alias actual de la imagen" + 
-                       f" de servidores -> '{alias}'")
-                serv_logger.debug(msg)
-            else:
-                # Como se ha eliminado creamos otra nueva
-                msg = (f" Imagen de servidores se ha borrado" + 
-                        "desde fuera del programa")
-                serv_logger.debug(msg)
-                register.remove(IMG_ID)
-                image = _config_image()
+            image_saved = register.load(IMG_ID)
+            alias = image_saved["alias"]
+            image = alias
+            if alias == "": image = image_saved["fingerprint"]
+    # Creamos los objetos de los servidores
     servers = []
     server_names = _process_names(num, *names)
     serv_logger.debug(f" Creando servidores con imagen {image}")
@@ -92,6 +70,7 @@ def get_servers(num:int, *names, image:str=None) -> list:
             ip = f"10.0.0.1{j}"
         ips.append(ip)
         server.add_to_network("eth0", with_ip=ip)
+        setattr(server, "port", PORT)
         servers.append(server)
     return servers
 
@@ -103,11 +82,11 @@ def _config_image():
     while checkin_lxclist(["lxc", "list"], 0, name):
         name = f"servconfig{j}"
         j += 1
-    msg = (f" Contenedor usado para crear imagen" + 
-          f" del servidores -> '{name}'")
+    msg = (f" Contenedor usado para crear imagen " + 
+          f"de servidores -> '{name}'")
     serv_logger.debug(msg)
     serv = Container(name, default_image)
-    # Lanzamos el contenedor e instalamos haproxy
+    # Lanzamos el contenedor e instalamos modulos
     serv_logger.info(f" Lanzando '{name}'...")
     serv.init(); serv.start()
     serv_logger.info(" Instalando tomcat8 (puede tardar)...")

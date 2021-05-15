@@ -1,9 +1,16 @@
 
+import logging
+
 from dependencies.utils.tools import pretty, objectlist_as_dict
+from dependencies.lxc.lxc_functions import (
+    checkin_lxclist,
+    lxc_image_list,
+    process_lxclist
+)
 import program.controllers.bridges as bridges
 import program.controllers.containers as containers
 import dependencies.register.register as register
-from .machines import load_balancer, net_devices, servers, clients
+from .machines import load_balancer, net_devices, servers, client
 
 # --------------------- FUNCIONES DE PLATAFORMA ------------------------
 # --------------------------------------------------------------------
@@ -12,11 +19,14 @@ from .machines import load_balancer, net_devices, servers, clients
 # los bridges (quien con quien) y muestra el estado actual de esta
 # --------------------------------------------------------------------
 
+plt_logger = logging.getLogger(__name__)
+# --------------------------------------------------------------------
 def is_deployed():
     if register.load(bridges.ID) is None:
         return False
     return True
 
+# --------------------------------------------------------------------
 def update_conexions():
     """ Se encarga de conectar los contenedores con los bridge. Mira 
     todos los contenedores creados (que estan en el registro) y si
@@ -55,7 +65,7 @@ def update_conexions():
         elif c.tag == servers.TAG:
             if not c.connected_networks["eth0"]:
                 bridges.attach(c.name, bgs_dict["lxdbr0"], "eth0")
-        elif c.tag == clients.TAG:
+        elif c.tag == client.TAG:
             if not c.connected_networks["eth0"]:
                 bridges.attach(c.name, bgs_dict["lxdbr1"], "eth0")
         containers.connect_to_networks(c)
@@ -81,3 +91,40 @@ def print_state():
             print(pretty(b))
     else:
         print("No hay bridges creados en la plataforma")
+        
+# --------------------------------------------------------------------
+def is_imageconfig_needed(reg_id_ofimage:str) -> bool:
+    reg_id = reg_id_ofimage
+    img_saved = register.load(reg_id)
+    if img_saved is None:
+        return True
+    else:
+        # Comprobamos que la imagen no se haya borrado en lxc
+        fgp = img_saved["fingerprint"]
+        msg = (f" Imagen anterior guardada en " + 
+                        f"registro '{reg_id}' -> '{fgp}'")
+        plt_logger.debug(msg)
+        if checkin_lxclist(["lxc", "image", "list"], 1, fgp):
+            # Vemos el alias de la imagen por si se ha modificado 
+            l = lxc_image_list()
+            images = process_lxclist(l)
+            headers = list(images.keys())
+            alias = ""
+            for i, fg in enumerate(images[headers[1]]):
+                if fg == fgp:
+                    alias = images[headers[0]][i]
+                    break
+            image_info = {"alias": alias, "fingerprint": fgp}
+            register.update(reg_id, image_info, override=True)
+            msg = (" Alias actual de la imagen " + 
+                    f"guardada en registro {reg_id} -> '{alias}'")
+            plt_logger.debug(msg)
+            return False
+        else:
+            # Como se ha eliminado creamos otra nueva
+            msg = (f" Imagen guardada en registro '{reg_id}' se ha " + 
+                    "borrado desde fuera del programa")
+            plt_logger.debug(msg)
+            register.remove(reg_id)
+            return True
+# --------------------------------------------------------------------

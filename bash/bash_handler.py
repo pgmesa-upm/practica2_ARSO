@@ -54,6 +54,8 @@ def config_cli() -> Cli:
            "\n                      by default 's_' is given to each server")
     crear.add_option("--name", description=msg, extra_arg=True, 
                                         multi=True, mandatory=True)
+    msg = ("<void or client_name> creates a client connected to the load balancer")
+    crear.add_option("--client", description=msg, extra_arg=True)
     msg = ("<alias or fingerprint> allows to specify the image of the " +
            "containers,\n                      by default ubuntu:18.04 is used")
     crear.add_option("--image", description=msg, extra_arg=True, mandatory=True)
@@ -106,14 +108,16 @@ def config_cli() -> Cli:
            "\n                      by default 's_' is given to each server")
     añadir.add_option("--name", description=msg, extra_arg=True, 
                                         multi=True, mandatory=True)
-    msg ="<alias or fingerprint> allows to specify the image of the servers"
-    añadir.add_option("--simage", description=msg, extra_arg=True, mandatory=True)
+    msg = ("adds clients instead of servers")
+    añadir.add_option("-cl", description=msg)
+    msg ="<alias or fingerprint> allows to specify the image"
+    añadir.add_option("--image", description=msg, extra_arg=True, mandatory=True)
     cli.add_command(añadir)
     _commands[cmd_name] = commands_rep.añadir
     
     cmd_name = "eliminar"
-    msg = ("<void or server_names> deletes the servers specified, if void " +
-          "\n           all servers are deleted")
+    msg = ("<void or container_names> deletes the containers specified, if void " +
+          "\n           all containers are deleted (some may not be removable")
     eliminar = Command(cmd_name, description=msg, extra_arg=True,  multi=True)
     cli.add_command(eliminar)
     _commands[cmd_name] = commands_rep.eliminar

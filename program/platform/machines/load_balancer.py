@@ -12,6 +12,7 @@ from dependencies.lxc.lxc_functions import (
     process_lxclist
 )
 from program.platform.machines import servers
+from program.platform import platform
 
 # ---------------------- BALANCEADOR DE CARGA ------------------------
 # --------------------------------------------------------------------
@@ -44,48 +45,24 @@ def get_lb(image:str=None, balance=None) -> Container:
     """
     # Comprobamos que si hace falta configurar una imagen base para
     # el balanceador o ya se ha creado antes y esta disponible
-    if image == None:
-        img_saved = register.load(IMG_ID)
-        if img_saved is None:
+    if image is None:
+        if platform.is_imageconfig_needed(IMG_ID):
             image = _config_image()
         else:
-            # Comprobamos que la imagen no se haya borrado en lxc
-            fgp = img_saved["fingerprint"]
-            msg = f" Imagen anterior guardada del balanceador '{fgp}'"
-            lb_logger.debug(msg)
-            if checkin_lxclist(["lxc", "image", "list"], 1, fgp):
-                # Vemos el alias de la imagen por si se ha modificado 
-                l = lxc_image_list()
-                images = process_lxclist(l)
-                headers = list(images.keys())
-                alias = ""
-                for i, fg in enumerate(images[headers[1]]):
-                    if fg == fgp:
-                        alias = images[headers[0]][i]
-                        break
-                image_info = {"alias": alias, "fingerprint": fgp}
-                register.update(IMG_ID, image_info, override=True)
-                image = alias
-                if alias == "": image = fgp
-                msg = f" Alias actual de la imagen del lb -> '{alias}'"
-                lb_logger.debug(msg)
-            else:
-                # Como se ha eliminado creamos otra nueva
-                msg = (f" Imagen del balanceador se ha borrado" + 
-                        "desde fuera del programa")
-                lb_logger.debug(msg)
-                register.remove(IMG_ID)
-                image = _config_image()
+            image_saved = register.load(IMG_ID)
+            alias = image_saved["alias"]
+            image = alias
+            if alias == "": image = image_saved["fingerprint"]
     if balance is None:
         balance = default_algorithm
-    # Creamos el balanceador
+    # Creamos el objeto del balanceador
     msg = (f" Creando balanceador con imagen '{image}' " + 
            f"y algoritmo de balanceo '{balance}'")
     lb_logger.debug(msg)
     lb = Container("lb", image, tag=TAG)
     lb.add_to_network("eth0", "10.0.0.10")
     lb.add_to_network("eth1", "10.0.1.10")
-    
+    setattr(lb, "port", PORT)
     setattr(lb, "algorithm", balance)
     return lb
 
@@ -107,7 +84,7 @@ def _config_image() -> str:
     msg = f" Contenedor usado para crear la imagen del lb -> '{name}'"
     lb_logger.debug(msg)
     lb_c = Container(name, default_image)
-    # Lanzamos el contenedor e instalamos haproxy
+    # Lanzamos el contenedor e instalamos modulos
     lb_logger.info(f" Lanzando '{name}'...")
     lb_c.init(); lb_c.start()
     lb_logger.info(" Instalando haproxy (puede tardar)...")
