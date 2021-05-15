@@ -2,6 +2,7 @@
 import subprocess
 from time import sleep
 
+# --------------------------------------------------------------------
 def checkin_lxclist(list_cmd:list, colum:int, val:str):
     process = subprocess.run(
         list_cmd,
@@ -13,6 +14,7 @@ def checkin_lxclist(list_cmd:list, colum:int, val:str):
         return True
     return False
 
+# --------------------------------------------------------------------
 def lxc_list(ips_to_wait:int=0, time_out=10, print_=False):
     """Se encarga de mostrar la lista de contenedores de lxc, pero 
     en caso de estar arrancados, como la ip tarda un rato en
@@ -20,8 +22,8 @@ def lxc_list(ips_to_wait:int=0, time_out=10, print_=False):
     informacion para mostrar la lista. Comprueba que todas las ips
     hayan aparecido"""
     if ips_to_wait == 0:
-        p = subprocess.run(["lxc", "list"], stdout=subprocess.PIPE)
-        salida = p.stdout.decode()
+        out = subprocess.run(["lxc", "list"], stdout=subprocess.PIPE)
+        salida = out.stdout.decode()[:-1]
     else:
         salida, t, twait= "", 0, 0.1
         while not salida.count(".") == 3*ips_to_wait:
@@ -30,11 +32,11 @@ def lxc_list(ips_to_wait:int=0, time_out=10, print_=False):
                 err = (" timeout de 'lxc list', no se pudieron " + 
                         "cargar todas las ips")
                 raise Exception(err)
-            out = subprocess.Popen(
+            out = subprocess.run(
                 ["lxc", "list"], 
                 stdout=subprocess.PIPE
             ) 
-            salida = out.stdout.read().decode()
+            salida = out.stdout.decode()
             salida = salida[:-1] # Eliminamos el ultimo salto de linea
     if print_:
         print(salida)
@@ -60,7 +62,8 @@ def lxc_network_list(print_=False):
     if print_:
         print(out)
     return out
-    
+
+# --------------------------------------------------------------------   
 def process_lxclist(string:str) -> dict:
     """Analiza una lista de lxc y proporciona toda su informacion 
     en forma de diccionario para que sea facilmente accesible.
@@ -138,5 +141,4 @@ def process_lxclist(string:str) -> dict:
                 values = ""
             info[key].append(values)
     return info
-
 # --------------------------------------------------------------------
