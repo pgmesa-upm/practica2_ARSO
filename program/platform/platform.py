@@ -8,7 +8,7 @@ from dependencies.lxc.lxc_functions import (
     process_lxclist
 )
 import program.controllers.bridges as bridges
-import program.controllers.containers as containers
+from program.controllers import containers
 import dependencies.register.register as register
 from .machines import load_balancer, net_devices, servers, client
 
