@@ -73,8 +73,8 @@ def config_cli() -> Cli:
        deploy.add_option(
               "--climage", description=msg, extra_arg=True, mandatory=True
        )
-       msg = ("allows to specify the balance algorithm of the load balancer " + 
-              "(default -> roundrobin)")
+       msg = ("allows to specify the balance algorithm of the load balancer," + 
+              "\n                      by default it uses 'roundrobin'")
        deploy.add_option(
               "--balance", description=msg, extra_arg=True, mandatory=True
        )
