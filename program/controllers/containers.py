@@ -3,7 +3,7 @@ import logging
 from os import remove
 from contextlib import suppress
 
-import dependencies.register.register as register
+from dependencies.register import register
 from dependencies.utils.decorators import catch_foreach
 from dependencies.lxc.lxc_classes.container import Container, LxcError
 from program.platform.machines import servers

@@ -2,8 +2,8 @@
 import logging
 from logging import Logger
 
-import program.controllers.containers as containers
-import dependencies.register.register as register
+from program.controllers import containers
+from dependencies.register import register
 from dependencies.utils.tools import objectlist_as_dict, remove_many
 
 

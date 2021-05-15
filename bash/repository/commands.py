@@ -13,7 +13,7 @@ from program.platform.machines import (
     data_base
 )
 from program import program
-import dependencies.register.register as register
+from dependencies.register import register
 from dependencies.utils.tools import concat_array
 from program.platform import platform
 

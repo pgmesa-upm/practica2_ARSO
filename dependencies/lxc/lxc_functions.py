@@ -45,7 +45,7 @@ def lxc_image_list(print_=False):
         ["lxc", "image", "list"],
         stdout=subprocess.PIPE
     )
-    out = l.stdout.decode()
+    out = l.stdout.decode()[:-1]
     if print_:
         print(out)
     return out
@@ -56,7 +56,7 @@ def lxc_network_list(print_=False):
         ["lxc", "network", "list"],
         stdout=subprocess.PIPE
     )
-    out = l.stdout.decode()
+    out = l.stdout.decode()[:-1]
     if print_:
         print(out)
     return out

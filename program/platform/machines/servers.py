@@ -2,7 +2,7 @@
 import logging
 
 from program.controllers import containers
-import dependencies.register.register as register
+from dependencies.register import register
 from dependencies.lxc.lxc_classes.container import Container
 from dependencies.utils.tools import objectlist_as_dict
 from dependencies.lxc.lxc_functions import (

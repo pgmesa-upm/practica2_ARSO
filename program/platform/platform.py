@@ -7,9 +7,8 @@ from dependencies.lxc.lxc_functions import (
     lxc_image_list,
     process_lxclist
 )
-import program.controllers.bridges as bridges
-from program.controllers import containers
-import dependencies.register.register as register
+from program.controllers import containers, bridges
+from dependencies.register import register
 from .machines import load_balancer, net_devices, servers, client
 
 # --------------------- FUNCIONES DE PLATAFORMA ------------------------

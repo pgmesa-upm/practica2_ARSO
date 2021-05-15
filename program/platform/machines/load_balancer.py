@@ -4,7 +4,7 @@ from os import remove
 
 from program.controllers import containers
 from program.controllers.containers import LxcError
-import dependencies.register.register as register
+from dependencies.register import register
 from dependencies.lxc.lxc_classes.container import Container
 from dependencies.lxc.lxc_functions import (
     checkin_lxclist,

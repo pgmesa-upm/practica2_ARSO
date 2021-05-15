@@ -7,7 +7,7 @@ from dependencies.lxc.lxc_functions import (
     lxc_image_list,
     process_lxclist
 )
-import dependencies.register.register as register
+from dependencies.register import register
 
 # --------------------------- SERVIDORES -----------------------------
 # --------------------------------------------------------------------
