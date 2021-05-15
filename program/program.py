@@ -1,5 +1,5 @@
 
-from program.platform.machines import load_balancer
+from program.platform.machines import load_balancer, servers
 from dependencies.utils.tools import pretty
 from contextlib import suppress
 import re
@@ -197,11 +197,23 @@ def _check_containers():
                     bg.used_by.remove(c.name)
             program_logger.warning(warn)
             warned = True
-            # Registramos que ha habido cambio en el numero de servidores
-            # y hay que actualizar haproxy
-            register.update("updates", True, override=False, dict_id="cs_num")
-            # Como para hacer delete hay que parar, tambien cambia el estado
-            register.update("updates", True, override=False, dict_id="cs_state") 
+            # Registramos cambios en contenedores
+            register.update(
+                "updates", True, override=False, dict_id="cs_num"
+            )
+            register.update(
+                "updates", True, override=False, dict_id="cs_state"
+            ) 
+            if c.tag == servers.TAG:
+                # Registramos que ha habido cambio en el numero de servidores
+                # y hay que actualizar haproxy
+                register.update(
+                    "updates", True, override=False, dict_id="s_num"
+                )
+                # Como para hacer delete hay que parar, tambien cambia el estado
+                register.update(
+                    "updates", True, override=False, dict_id="s_state"
+                ) 
             continue
         index = cs_info[headers[0]].index(c.name)
         if c.state != cs_info[headers[1]][index]:
@@ -212,7 +224,14 @@ def _check_containers():
             c.state = new_state
             program_logger.warning(warn)
             warned = True
-            register.update("updates", True, override=False, dict_id="cs_state")
+            # Registramos cambios en contenedores
+            register.update(
+                "updates", True, override=False, dict_id="cs_state"
+            )
+            if c.tag == servers.TAG:
+                register.update(
+                    "updates", True, override=False, dict_id="s_state"
+                )
         if c.state == "RUNNING":
             info = cs_info[headers[2]][index]
             current_nets = {}

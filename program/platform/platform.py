@@ -43,9 +43,11 @@ def update_conexions():
     # Miramos si hay contenedores en el programa (si no hay, ni si
     # quiera el lb, es que los han eliminado desde fuera)
     cs = register.load(containers.ID)
-    if cs == None: return
+    if cs == None: 
+        register.update("updates", {})
+        return
     # Actualizamos los servidores conectados al balanceador de carga
-    if updates.get("cs_state", False):
+    if updates.get("s_state", False):
         load_balancer.update_haproxycfg()
     # Realizamos las conexiones de los contenedores a los bridge
     bgs = register.load(bridges.ID)

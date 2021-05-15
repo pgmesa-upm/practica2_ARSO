@@ -6,6 +6,7 @@ from contextlib import suppress
 import dependencies.register.register as register
 from dependencies.utils.decorators import catch_foreach
 from dependencies.lxc.lxc_classes.container import Container, LxcError
+from program.platform.machines import servers
 
 # ------------------ CONTROLADOR DE CONTENEDORES ---------------------
 # --------------------------------------------------------------------
@@ -131,6 +132,22 @@ def _update_container(c_to_update:Container, remove:bool=False):
         remove (bool, optional): Si es verdadero, se elimina el
             contenedor del registro. Por defecto es False
     """
+    if remove:
+        register.update(
+            "updates", True, override=False, dict_id="cs_num"
+        ) 
+        if c_to_update.tag == servers.TAG:
+            register.update(
+                "updates", True, override=False, dict_id="s_num"
+            )
+    else:
+        register.update(
+            "updates", True, override=False, dict_id="cs_state"
+        ) 
+        if c_to_update.tag == servers.TAG:
+            register.update(
+                "updates", True, override=False, dict_id="s_state"
+            )
     cs = register.load(ID)
     index = None
     for i, c in enumerate(cs):
@@ -146,10 +163,6 @@ def _update_container(c_to_update:Container, remove:bool=False):
         else:
             cs.append(c_to_update)
         register.update(ID, cs)
-    if remove:
-        register.update("updates", True, override=False, dict_id="cs_num") 
-    else:
-        register.update("updates", True, override=False, dict_id="cs_state") 
 
 def _add_container(c_to_add:Container):
     """Añade un contenedor al registro
@@ -162,6 +175,11 @@ def _add_container(c_to_add:Container):
         register.add(ID, [c_to_add])
     else:
         register.update(ID, c_to_add, override=False)
-    register.update("updates", True, override=False, dict_id="cs_num") 
-    
+    register.update(
+        "updates", True, override=False, dict_id="cs_num"
+    ) 
+    if c_to_add.tag == servers.TAG:
+        register.update(
+            "updates", True, override=False, dict_id="s_num"
+        ) 
 # --------------------------------------------------------------------

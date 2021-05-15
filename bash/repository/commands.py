@@ -27,7 +27,7 @@ from program.platform import platform
 cmd_logger = logging.getLogger(__name__)
 # --------------------------------------------------------------------
 @target_containers(cmd_logger)           
-def arrancar(*target_cs, options={}, flags=[]):
+def start(*target_cs, options={}, flags=[]):
     """Arranca los contenedores que se enceuntren en target_cs
 
     Args:
@@ -54,7 +54,7 @@ def arrancar(*target_cs, options={}, flags=[]):
         
 # --------------------------------------------------------------------
 @target_containers(cmd_logger) 
-def parar(*target_cs, options={}, flags=[]):
+def stop(*target_cs, options={}, flags=[]):
     """Detiene los contenedores que se enceuntren en target_cs
 
     Args:
@@ -73,7 +73,7 @@ def parar(*target_cs, options={}, flags=[]):
         
 # --------------------------------------------------------------------  
 @target_containers(cmd_logger)  
-def pausar(*target_cs, options={}, flags=[]):
+def pause(*target_cs, options={}, flags=[]):
     """Pausa los contenedores que se enceuntren en target_cs
 
     Args:
@@ -92,7 +92,7 @@ def pausar(*target_cs, options={}, flags=[]):
 
 # --------------------------------------------------------------------
 @target_containers(cmd_logger) 
-def eliminar(*target_cs, options={}, flags=[],
+def remove(*target_cs, options={}, flags=[],
             skip_tags=[load_balancer.TAG, data_base.TAG]): 
     """Elimina los contenedores que se enceuntren en target_cs.
     Por defecto, esta funcion solo elimina los contenedores que 
@@ -155,7 +155,7 @@ def term(*target_cs, options={}, flags=[]):
     cmd_logger.info(msg)
     
     # --------------------------------------------------------------------
-def añadir(num:int, options={}, flags=[], extra_cs=[]):
+def add(num:int, options={}, flags=[], extra_cs=[]):
     """Añade el numero de contenedores especificados a la plataforma
     de servidores. Por defecto solo añade contenedores que sean del
     tipo servidor, pero en extra_cs se pueden especificar contenedores 
@@ -249,10 +249,10 @@ def añadir(num:int, options={}, flags=[], extra_cs=[]):
         # (si nos lo han pedido) 
         if successful_cs != None and launch:
             c_names = list(map(lambda c: c.name, successful_cs))
-            arrancar(*c_names, flags=flags) 
+            start(*c_names, flags=flags) 
                  
 # --------------------------------------------------------------------
-def crear(numServs:int, options={}, flags=[]):
+def deploy(numServs:int, options={}, flags=[]):
     """Crea la plataforma del sistema-servidor, desplegando los 
     bridges y contenedores y conectandolos entre ellos (de la forma
     que se hayan definido estas conexiones en la carpeta program)
@@ -303,11 +303,11 @@ def crear(numServs:int, options={}, flags=[]):
         extra.append(cl)
     # Añadimos todos los contenedores a la plataforma (En añadir se
     # configuran los clientes)
-    añadir(numServs, options=options, flags=flags, extra_cs=extra) 
+    add(numServs, options=options, flags=flags, extra_cs=extra) 
     cmd_logger.info(" Plataforma de servidores desplegada")
 
 # --------------------------------------------------------------------
-def destruir(options={}, flags=[]):
+def destroy(options={}, flags=[]):
     """Destruye la platafrma del sistema-servidor eliminando todos
     sus componenetes (bridges, contenedores y las conexiones entre
     ellos). Reutiliza el codigo de la funcion eliminar para eliminar
@@ -338,7 +338,7 @@ def destruir(options={}, flags=[]):
     else:
         c_names = list(map(lambda c: c.name, cs))
         flags.append("-f") # Añadimos el flag -f
-        eliminar(*c_names, flags=flags, skip_tags=[])
+        remove(*c_names, flags=flags, skip_tags=[])
     # Eliminamos bridges
     bgs = register.load(bridges.ID)
     if bgs == None: 
