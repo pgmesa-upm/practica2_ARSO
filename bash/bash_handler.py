@@ -152,15 +152,15 @@ def config_cli() -> Cli:
        _commands[cmd_name] = commands_rep.term
        
        #Flags/Options
-       msg = "shows information about every process that is being executed"
-       verbosity = Flag("-v", notCompatibleWithFlags=["-d"], description=msg)
+       msg = "'warning mode', only shows warning and error msgs during execution"
+       verbosity = Flag("-w", notCompatibleWithFlags=["-d"], description=msg)
        cli.add_flag(verbosity)
        msg = "option for debugging"
-       debugging = Flag("-d", notCompatibleWithFlags=["-v"], description=msg)
+       debugging = Flag("-d", notCompatibleWithFlags=["-w"], description=msg)
        cli.add_flag(debugging)
        msg = ("'quiet mode', doesn't show any msg " + 
               "during execution (only when an error occurs)")
-       quiet = Flag("-q", notCompatibleWithFlags=["-v","-d"], description=msg)
+       quiet = Flag("-q", notCompatibleWithFlags=["-w","-d"], description=msg)
        cli.add_flag(quiet)
        msg = "executes the action without asking confirmation"
        force = Flag("-f", description=msg)

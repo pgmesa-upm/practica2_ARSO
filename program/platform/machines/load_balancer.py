@@ -79,7 +79,7 @@ def _config_image() -> str:
         j += 1
     msg = f" Contenedor usado para crear la imagen del lb -> '{name}'"
     lb_logger.debug(msg)
-    lb_c = Container(name, default_image)
+    lb_c = Container(name, default_image, tag=TAG)
     # Lanzamos el contenedor e instalamos modulos
     lb_logger.info(f" Lanzando '{name}'...")
     lb_c.init(); lb_c.start()
@@ -96,6 +96,12 @@ def _config_image() -> str:
     lb_c.add_to_network("eth0")
     lb_c.add_to_network("eth1")
     containers.configure_netfile(lb_c)
+    # Configurmaos el haproxy file
+    setattr(lb_c, "port", PORT)
+    setattr(lb_c, "algorithm", default_algorithm)
+    register.add(containers.ID, [lb_c])
+    update_haproxycfg()
+    register.remove(containers.ID)
     # Vemos que no existe una imagen con el alias que vamos a usar
     alias = "haproxy_lb"
     k = 1

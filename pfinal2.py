@@ -77,12 +77,12 @@ def _config_verbosity(flags:list):
     """
     if "-d" in flags:
         logLvl = logging.DEBUG
-    elif "-v" in flags:
-        logLvl = logging.INFO
+    elif "-w" in flags:
+        logLvl = logging.WARNING
     elif "-q" in flags:
         logLvl = logging.ERROR
     else:
-        logLvl = logging.WARNING
+        logLvl = logging.INFO
     root_logger = logging.getLogger()
     root_logger.setLevel(logLvl) 
 
