@@ -2,11 +2,7 @@
 import logging
 
 from dependencies.utils.tools import pretty, objectlist_as_dict
-from dependencies.lxc.lxc_functions import (
-    checkin_lxclist,
-    lxc_image_list,
-    process_lxclist
-)
+from dependencies.lxc import lxc
 from program.controllers import containers, bridges
 from dependencies.register import register
 from .machines import load_balancer, net_devices, servers, client
@@ -19,6 +15,9 @@ from .machines import load_balancer, net_devices, servers, client
 # --------------------------------------------------------------------
 
 plt_logger = logging.getLogger(__name__)
+# Imagen por defecto sobre la que se va a realizar la configuracion
+# de los contenedores
+default_image = "ubuntu:18.04"
 # --------------------------------------------------------------------
 def is_deployed():
     if register.load(bridges.ID) is None:
@@ -105,16 +104,10 @@ def is_imageconfig_needed(reg_id_ofimage:str) -> bool:
         msg = (f" Imagen anterior guardada en " + 
                         f"registro '{reg_id}' -> '{fgp}'")
         plt_logger.debug(msg)
-        if checkin_lxclist(["lxc", "image", "list"], 1, fgp):
+        images = lxc.lxc_image_list()
+        if fgp in images:
             # Vemos el alias de la imagen por si se ha modificado 
-            l = lxc_image_list()
-            images = process_lxclist(l)
-            headers = list(images.keys())
-            alias = ""
-            for i, fg in enumerate(images[headers[1]]):
-                if fg == fgp:
-                    alias = images[headers[0]][i]
-                    break
+            alias = images[fgp]["ALIAS"] 
             image_info = {"alias": alias, "fingerprint": fgp}
             register.update(reg_id, image_info, override=True)
             msg = (" Alias actual de la imagen " + 
@@ -129,3 +122,5 @@ def is_imageconfig_needed(reg_id_ofimage:str) -> bool:
             register.remove(reg_id)
             return True
 # --------------------------------------------------------------------
+def create_imageof(c_tag, modules:list=None, networks=None):
+    pass

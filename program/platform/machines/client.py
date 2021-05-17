@@ -2,11 +2,7 @@ import logging
 
 from dependencies.lxc.lxc_classes.container import Container
 from program.platform import platform
-from dependencies.lxc.lxc_functions import (
-    checkin_lxclist,
-    lxc_image_list,
-    process_lxclist
-)
+from dependencies.lxc import lxc
 from dependencies.register import register
 
 # --------------------------- SERVIDORES -----------------------------
@@ -36,7 +32,7 @@ def get_client(name="cl",image:str=None) -> Container:
             if alias == "": image = image_saved["fingerprint"]
     # Creamos los objetos de lo cliente
     cl = Container(name, image, tag=TAG)
-    cl.add_to_network("eth0", "10.0.1.2")
+    cl.add_to_network("eth0", with_ip="10.0.1.2")
     return cl
 
 # --------------------------------------------------------------------
@@ -45,7 +41,7 @@ def _config_image() -> str:
     # Vemos que no haya un contenedor con ese nombre ya
     name = "clconfig"
     j = 1
-    while checkin_lxclist(["lxc", "list"], 0, name):
+    while name in lxc.lxc_list():
         name = f"clconfig{j}"
         j += 1
     msg = (f" Contenedor usado para crear imagen " + 
@@ -60,13 +56,16 @@ def _config_image() -> str:
     try:
         cl.install("lynx")
         cl_logger.info(" lynx instalado con exito")
-    except:
-        cl_logger.error(" Fallo al instalar lynx")
+    except lxc.LxcError as err:
+        err_msg = " Fallo al instalar lynx, error de lxc: " + str(err)
+        cl_logger.error(err_msg)
         return default_image
     # Vemos que no existe una imagen con el alias que vamos a usar
     alias = "lynx_client"
     k = 1
-    while checkin_lxclist(["lxc", "image", "list"], 0, alias):
+    images = lxc.lxc_image_list()
+    aliases = list(map(lambda f: images[f]["ALIAS"], images))  
+    while alias in aliases:
         alias = f"lynx_client{k}"
         k += 1
     # Una vez el alias es valido publicamos la imagen
@@ -79,13 +78,11 @@ def _config_image() -> str:
     cl.delete()
     # Guardamos la imagen en el registro y la devolvemos 
     # (obtenemos tambien la huella que le ha asignado lxc)
-    l = lxc_image_list()
-    images = process_lxclist(l)
-    headers = list(images.keys())
+    images = lxc.lxc_image_list()
     fingerprint = ""
-    for i, al in enumerate(images[headers[0]]):
-        if al == alias:
-            fingerprint = images[headers[1]][i]
+    for f, info in images.items():
+        if info["ALIAS"] == alias:
+            fingerprint = f
     image_info = {"alias": alias, "fingerprint": fingerprint}
     register.add(IMG_ID, image_info)
     return alias

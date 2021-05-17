@@ -5,11 +5,7 @@ from program.controllers import containers
 from dependencies.register import register
 from dependencies.lxc.lxc_classes.container import Container
 from dependencies.utils.tools import objectlist_as_dict
-from dependencies.lxc.lxc_functions import (
-    checkin_lxclist,
-    lxc_image_list,
-    process_lxclist
-)
+from dependencies.lxc import lxc
 from program.platform import platform
 # --------------------------- SERVIDORES -----------------------------
 # --------------------------------------------------------------------
@@ -79,7 +75,7 @@ def _config_image():
     # Vemos que no haya un contenedor con ese nombre ya
     name = "servconfig"
     j = 1
-    while checkin_lxclist(["lxc", "list"], 0, name):
+    while name in lxc.lxc_list():
         name = f"servconfig{j}"
         j += 1
     msg = (f" Contenedor usado para crear imagen " + 
@@ -94,13 +90,17 @@ def _config_image():
     try:
         serv.install("tomcat8")
         serv_logger.info(" Tomcat8 instalado con exito")
-    except:
-        serv_logger.error(" Fallo al instalar tomcat8")
+    except lxc.LxcError as err:
+        err_msg = " Fallo al instalar tomcat8, error de lxc: " + str(err)
+        serv_logger.error(err_msg)
         return default_image
+      
     # Vemos que no existe una imagen con el alias que vamos a usar
     alias = "tomcat8_serv"
     k = 1
-    while checkin_lxclist(["lxc", "image", "list"], 0, alias):
+    images = lxc.lxc_image_list()
+    aliases = list(map(lambda f: images[f]["ALIAS"], images))  
+    while alias in aliases:
         alias = f"tomcat8_serv{k}"
         k += 1
     # Una vez el alias es valido publicamos la imagen
@@ -113,13 +113,11 @@ def _config_image():
     serv.delete()
     # Guardamos la imagen en el registro y la devolvemos 
     # (obtenemos tambien la huella que le ha asignado lxc)
-    l = lxc_image_list()
-    images = process_lxclist(l)
-    headers = list(images.keys())
+    images = lxc.lxc_image_list()
     fingerprint = ""
-    for i, al in enumerate(images[headers[0]]):
-        if al == alias:
-            fingerprint = images[headers[1]][i]
+    for f, info in images.items():
+        if info["ALIAS"] == alias:
+            fingerprint = f
     image_info = {"alias": alias, "fingerprint": fingerprint}
     register.add(IMG_ID, image_info)
     return alias
@@ -139,14 +137,14 @@ def _process_names(num:int, *names) -> list:
     Returns:
         list: lista con nombres para los servidores
     """
-    server_names = []
     j = 1
-    machine_names = objectlist_as_dict(
-        register.load(containers.ID), 
-        key_attribute="name"
-    )
-    if machine_names == None:
-        machine_names = []
+    cs = register.load(containers.ID)
+    if cs == None:
+        cs_names = []
+    else:
+        cs_names = list(map(lambda c: c.name, cs)) 
+    existing_names = cs_names + list(lxc.lxc_list().keys())
+    server_names = []
     for i in range(num):
         try:
             name = names[i] 
@@ -155,10 +153,10 @@ def _process_names(num:int, *names) -> list:
             # uno que no exista ya o no nos hayan pasado antes
             name = f"s{j}"
             j += 1
-            while (name in server_names or 
-                     name in machine_names):   
+            while name in existing_names:   
                 name = f"s{j}"
                 j += 1
+        existing_names.append(name)
         server_names.append(name)
     return server_names
 # --------------------------------------------------------------------

@@ -1,5 +1,6 @@
-import subprocess
-from contextlib import suppress
+
+from ...lxc import lxc
+from ..lxc import LxcNetworkError
 
 class Bridge:
     """Clase envoltorio que permite controlar un bridge de lxc
@@ -24,29 +25,6 @@ class Bridge:
         self.ipv6_nat = "true" if ipv6_nat == True else "false"
         self.ipv6_addr = ipv6_addr if ipv6_addr != None else "none"
         self.used_by = []
-    
-    def _run(self, cmd:list):
-        """Ejecuta un comando mediante subprocess y controla los 
-        errores que puedan surgir. Espera a que termine el proceso
-        (Llamada bloqueante)
-
-        Args:
-            cmd (list): Comando a ejecutar
-
-        Raises:
-            LxcError: Si surge algun error ejecutando el comando
-        """
-        process = subprocess.run(
-            cmd, 
-            stderr=subprocess.PIPE,
-            stdout=subprocess.PIPE # Para que no salga en consola
-        )
-        outcome = process.returncode
-        if outcome != 0:
-            err_msg = (f" Fallo al ejecutar el comando {cmd}.\n" +
-                            "Mensaje de error de lxc: ->")
-            err_msg += process.stderr.decode().strip()[6:]
-            raise LxcNetworkError(err_msg)
   
     def add_container(self, cs_name:str, with_eth:str):
         """Añade un contenedor a la red del bridge
@@ -58,14 +36,14 @@ class Bridge:
             "lxc", "network", "attach" ,
             self.name, cs_name, with_eth
         ]
-        self._run(cmd)
+        lxc.run(cmd)
         self.used_by.append(cs_name)
     
     def create(self):
         """Crea el bridge y si ya esta creado o se ha creado
         con exito tambien lo configura"""
         try:
-            self._run(["lxc", "network", "create", self.name])
+            lxc.run(["lxc", "network", "create", self.name])
         except LxcNetworkError as err:
             err_msg = str(err)
             if "already exists" in err_msg:
@@ -76,10 +54,10 @@ class Bridge:
                 
     def _configure_ips (self):
         set_ = ["lxc", "network", "set", self.name] 
-        self._run(set_ + ["ipv4.nat", self.ipv4_nat])
-        self._run(set_ + ["ipv4.address", self.ipv4_addr])
-        self._run(set_ + ["ipv6.nat", self.ipv6_nat])
-        self._run(set_ + ["ipv6.address", self.ipv6_addr])
+        lxc.run(set_ + ["ipv4.nat", self.ipv4_nat])
+        lxc.run(set_ + ["ipv4.address", self.ipv4_addr])
+        lxc.run(set_ + ["ipv6.nat", self.ipv6_nat])
+        lxc.run(set_ + ["ipv6.address", self.ipv6_addr])
     
     def delete(self):
         """Elimina el bridge
@@ -90,7 +68,7 @@ class Bridge:
         """
         if len(self.used_by) == 0:
             cmd = ["lxc", "network", "delete", self.name]
-            self._run(cmd)
+            lxc.run(cmd)
         else:
             err = (f" El bridge '{self.name}' esta siendo usado " +
                   f"por: {self.used_by} y no se puede eliminar")
@@ -98,10 +76,4 @@ class Bridge:
         
     def __str__(self):
         return self.name
-
-# --------------------------------------------------------------------
-class LxcNetworkError(Exception):
-    """Excepcion personalizada para los errores al manipular 
-    bridges de lxc"""
-    pass
 # --------------------------------------------------------------------

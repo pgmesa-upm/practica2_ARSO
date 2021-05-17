@@ -1,16 +1,12 @@
 
 import logging
 from os import remove
+from dependencies import lxc
 
 from program.controllers import containers
-from program.controllers.containers import LxcError
 from dependencies.register import register
 from dependencies.lxc.lxc_classes.container import Container
-from dependencies.lxc.lxc_functions import (
-    checkin_lxclist,
-    lxc_image_list,
-    process_lxclist
-)
+from dependencies.lxc import lxc
 from program.platform.machines import servers
 from program.platform import platform
 
@@ -60,8 +56,8 @@ def get_lb(image:str=None, balance=None) -> Container:
            f"y algoritmo de balanceo '{balance}'")
     lb_logger.debug(msg)
     lb = Container("lb", image, tag=TAG)
-    lb.add_to_network("eth0", "10.0.0.10")
-    lb.add_to_network("eth1", "10.0.1.10")
+    lb.add_to_network("eth0", with_ip="10.0.0.10")
+    lb.add_to_network("eth1", with_ip="10.0.1.10")
     setattr(lb, "port", PORT)
     setattr(lb, "algorithm", balance)
     return lb
@@ -78,7 +74,7 @@ def _config_image() -> str:
     # Vemos que no haya un contenedor con ese nombre ya
     name = "lbconfig"
     j = 1
-    while checkin_lxclist(["lxc", "list"], 0, name):
+    while name in lxc.lxc_list():
         name = f"lbconfig{j}"
         j += 1
     msg = f" Contenedor usado para crear la imagen del lb -> '{name}'"
@@ -91,19 +87,21 @@ def _config_image() -> str:
     try:
         lb_c.update_apt()
         lb_c.install("haproxy")
-        lb_c.run(["service","haproxy","start"], inside=True)
-    except LxcError as err:
-        err_msg = " Fallo al instalar haproxy - error de lxc: " + err
+        lb_c.execute(["service","haproxy","start"])
+    except lxc.LxcError as err:
+        err_msg = " Fallo al instalar haproxy, error de lxc: " + str(err)
         lb_logger.error(err_msg)
         return default_image
     # Configuramos el netfile
-    lb_c.add_to_network("eth0", "10.0.0.10")
-    lb_c.add_to_network("eth1", "10.0.1.10")
+    lb_c.add_to_network("eth0")
+    lb_c.add_to_network("eth1")
     containers.configure_netfile(lb_c)
     # Vemos que no existe una imagen con el alias que vamos a usar
     alias = "haproxy_lb"
     k = 1
-    while checkin_lxclist(["lxc", "image", "list"], 0, alias):
+    images = lxc.lxc_image_list()
+    aliases = list(map(lambda f: images[f]["ALIAS"], images))  
+    while alias in aliases:
         alias = f"haproxy_lb{k}"
         k += 1
     # Una vez el alias es valido publicamos la imagen
@@ -114,13 +112,11 @@ def _config_image() -> str:
     # Eliminamos el contenedor
     lb_c.delete()
     # Guardamos la imagen en el registro y la devolvemos
-    l = lxc_image_list()
-    images = process_lxclist(l)
-    headers = list(images.keys())
+    images = lxc.lxc_image_list()
     fingerprint = ""
-    for i, al in enumerate(images[headers[0]]):
-        if al == alias:
-            fingerprint = images[headers[1]][i]
+    for f, info in images.items():
+        if info["ALIAS"] == alias:
+            fingerprint = f
     image_info = {"alias": alias, "fingerprint": fingerprint}
     register.add(IMG_ID, image_info)
     return alias
@@ -181,10 +177,10 @@ def update_haproxycfg():
         file.write(configured_file)
     lb.push(file_name, path)
     try:
-        lb.run(["haproxy", "-f", path+file_name, "-c"], inside=True)
-        lb.run(["service","haproxy","restart"], inside=True)
+        lb.execute(["haproxy", "-f", path+file_name, "-c"])
+        lb.execute(["service","haproxy","restart"])
         lb_logger.info(" Fichero haproxy actualizado con exito")
-    except LxcError as err:
+    except lxc.LxcError as err:
         err_msg = f" Fallo al configurar el fichero haproxy: {err}" 
         lb_logger.error(err_msg)
     remove("haproxy.cfg")

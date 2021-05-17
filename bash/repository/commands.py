@@ -378,5 +378,4 @@ def show(options={}, flags={}):
         platform.print_state()
     elif "dep" in options:
         program.show_dependencies()
-        
 # --------------------------------------------------------------------

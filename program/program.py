@@ -8,11 +8,7 @@ import platform as plt
 import subprocess
 from functools import reduce
 
-from dependencies.lxc.lxc_functions import (
-    lxc_list, 
-    lxc_network_list,
-    process_lxclist
-)
+from dependencies.lxc import lxc
 from program.controllers import containers, bridges
 from dependencies.register import register
 
@@ -59,7 +55,7 @@ def show_platform_diagram():
         program_logger.error("Se necesita instalar 'imagemagick'")
         return
     path = "program/resources/images/diagram.png"
-    subprocess.Popen(["display", path],stdout=subprocess.PIPE) 
+    subprocess.Popen(["display", path], stdout=subprocess.PIPE) 
         
 def show_dependencies():
     """Muestra las dependencias externas a las que esta ligado el
@@ -79,12 +75,12 @@ def list_lxc_containers():
         total = running+frozen
         ips = reduce(lambda acum, c: acum+len(c.networks), total, 0)
     try:
-        lxc_list(ips_to_wait=ips, print_=True)
+        lxc.lxc_list(ips_to_wait=ips, print_=True)
     except Exception as err:
         program_logger.error(err)
 
 def list_lxc_bridges():
-    lxc_network_list(print_=True)
+    lxc.lxc_network_list(print_=True)
     
 # --------------------------------------------------------------------   
 def check_dependencies():
@@ -133,7 +129,7 @@ def check_dependencies():
                "necesario para la ejecucion del programa.\nIntroduce " +
                f"'{lxd.cmd}' en la linea de comandos para instalarlo")
         raise ProgramError(err + info)
-    subprocess.run(["lxd", "init", "--auto"])
+    lxc.run(["lxd", "init", "--auto"])
     if not xterm.check():
         warn = (" 'xterm' no esta instalado en este ordenador y " +
                "algunas funcionalidades pueden requerir este modulo. " + 
@@ -182,12 +178,10 @@ def _check_containers():
     cs_object = register.load(containers.ID)
     bgs = register.load(bridges.ID)
     if cs_object is None: return False
-    l = lxc_list()
-    cs_info = process_lxclist(l)
-    headers = list(cs_info.keys())
+    cs_info = lxc.lxc_list()
     cs_updated = []
     for c in cs_object:
-        if c.name not in cs_info[headers[0]]:
+        if c.name not in cs_info:
             warn = (f" El contenedor '{c.name}' se ha eliminado fuera " +
                     "del programa (informacion actualizada)")
             for bg in bgs:
@@ -213,9 +207,8 @@ def _check_containers():
                     "updates", True, override=False, dict_id="s_state"
                 ) 
             continue
-        index = cs_info[headers[0]].index(c.name)
-        if c.state != cs_info[headers[1]][index]:
-            new_state = cs_info[headers[1]][index]
+        if c.state != cs_info[c.name]["STATE"]:
+            new_state = cs_info[c.name]["STATE"]
             warn = (f" El contenedor '{c.name}' se ha modificado desde " +
                    f"fuera del programa, ha pasado de '{c.state}' a " + 
                    f"'{new_state}' (informacion actualizada)")
@@ -231,17 +224,7 @@ def _check_containers():
                     "updates", True, override=False, dict_id="s_state"
                 )
         if c.state == "RUNNING":
-            info = cs_info[headers[2]][index]
-            current_nets = {}
-            if info != "":
-                if type(info) != list:
-                    info = [info]
-                for line in info:
-                    splitted = re.split(r"\(| |\)", line)
-                    while "" in splitted:
-                            splitted.remove("")
-                    ipv4, current_eth = splitted
-                    current_nets[current_eth] = ipv4
+            current_nets = cs_info[c.name]["IPV4"]
             for eth, ip in c.networks.items():
                 if eth not in current_nets:
                     warn = (f" La ethernet '{eth}' de '{c.name}' se ha " + 
@@ -268,7 +251,7 @@ def _check_containers():
                 warn = (f" Se ha añadido la tarjeta de red '{eth}' con " +
                         f"ip '{ip}' al contenedor '{c.name}' " + 
                          "(informacion actualizada)")
-                c.add_to_network(eth, ip)
+                c.add_to_network(eth, with_ip=ip)
                 c.connected_networks[eth] = True
                 program_logger.warning(warn)
                 warned = True
@@ -284,12 +267,10 @@ def _check_bridges():
     warned = False
     bgs = register.load(bridges.ID)
     if bgs is None: return False
-    l = lxc_network_list()
-    bgs_info = process_lxclist(l)
-    headers = list(bgs_info.keys())
+    bgs_info = lxc.lxc_network_list()
     bgs_updated = []
     for bg in bgs:
-        if bg.name not in bgs_info[headers[0]]:
+        if bg.name not in bgs_info:
             warn = (f" El bridge '{bg.name}' se ha eliminado desde " +
                     "fuera del programa (informacion actualizada)")
             program_logger.warning(warn)

@@ -127,7 +127,7 @@ def config_cli() -> Cli:
        
        cmd_name = "remove"
        msg = ("<void or container_names> deletes the containers specified, if void " +
-              "\n           all containers are deleted (some may not be removable")
+              "\n           all containers are deleted (some may not be removable)")
        remove = Command(cmd_name, description=msg, extra_arg=True,  multi=True)
        cli.add_command(remove)
        _commands[cmd_name] = commands_rep.remove

@@ -1,6 +1,10 @@
 
-import subprocess
 from contextlib import suppress
+from os import stat
+from time import sleep
+
+from ...lxc import lxc
+from ..lxc import LxcError
 
 
 # Posibles estados de los contenedores
@@ -28,32 +32,17 @@ class Container:
         self.networks = {}
         self.connected_networks = {}
         
-    def run(self, cmd:list, inside=False):
-        """Ejecuta un comando mediante subprocess y controla los 
-        errores que puedan surgir. Espera a que termine el proceso
-        (Llamada bloqueante)
+    def execute(self, cmd:list, stdout=True, stderr=True):
+        """Ejecuta un comando en el interior del contenedor
 
         Args:
             cmd (list): Comando a ejecutar
-
-        Raises:
-            LxcError: Si surge algun error ejecutando el comando
         """
-        if inside:
-            cmd = ["lxc","exec",self.name,"--"] + cmd
-        process = subprocess.run(
-            cmd, 
-            stderr=subprocess.PIPE,
-            stdout=subprocess.PIPE # No queremos que salga en consola
-        )
-        outcome = process.returncode
-        if outcome != 0:
-            err_msg = (f" Fallo al ejecutar el comando {cmd}.\n" +
-                            "Mensaje de error de lxc: ->")
-            err_msg += process.stderr.decode().strip()[6:]
-            raise LxcError(err_msg)    
+        cmd = ["lxc", "exec", self.name, "--"] + cmd
+        out = lxc.run(cmd, stdout=stdout, stderr=stderr)  
+        return out  
         
-    def add_to_network(self, eth:str, with_ip:str):
+    def add_to_network(self, eth:str, with_ip:str=None):
         """Añade una tarjeta de red para conectarse a una red (se 
         conectara al bridge/net a la que se haya asociado la tarjeta)
         con la ip especificada
@@ -70,13 +59,18 @@ class Container:
             err = (f" La tarjeta de red '{eth}' no se encuentra " + 
                    f"en el {self.tag} '{self.name}'")
             raise LxcError(err)
-        if self.connected_networks[eth]:
+        if self.connected_networks[eth] is None:
+            err = (f" La tarjeta de red {eth} del {self.tag} " +
+                   f"'{self.name}' no tiene asignada una ip con la que " +
+                   "conectarse a la subred de su bridge asociado")
+            raise LxcError(err)
+        elif self.connected_networks[eth]:
             err = (f" {self.tag} '{self.name}' ya se ha conectado " +
                    f"a la network '{eth}' con la ip {self.networks[eth]}")
             raise LxcError(err)
         cmd = ["lxc","config","device","set", self.name,
                 eth, "ipv4.address", self.networks[eth]]
-        self.run(cmd)
+        lxc.run(cmd)
         self.connected_networks[eth] = True
     
     def open_terminal(self):
@@ -90,7 +84,7 @@ class Container:
             err = (f" {self.tag} '{self.name}' esta " +
                         f"'{self.state}' y no puede abrir la terminal")
             raise LxcError(err)
-        subprocess.Popen([
+        lxc.Popen([
             "xterm","-fa", "monaco", "-fs", "13", "-bg", "black",
             "-fg", "green", "-e", f"lxc exec {self.name} bash"
         ])
@@ -105,7 +99,7 @@ class Container:
             err = (f" {self.tag} '{self.name}' esta '{self.state}' " +
                                 "y no puede ser inicializado de nuevo")
             raise LxcError(err)
-        self.run(["lxc", "init", self.container_image, self.name])  
+        lxc.run(["lxc", "init", self.container_image, self.name])  
         self.state = STOPPED
         # Se limitan los recursos del contenedor 
         limits = {
@@ -115,7 +109,7 @@ class Container:
         }
         for l in limits: 
             with suppress(LxcError):
-                self.run(["lxc", "config", "set", self.name] + limits[l])
+                lxc.run(["lxc", "config", "set", self.name] + limits[l])
                 
     def wait_for_startup(self):
         """Espera a que el contenedor haya terminado de arrancarse
@@ -129,20 +123,19 @@ class Container:
         state = "initializing"
         while state != "running" and state != "degraded":
             ask_if_running = ["systemctl", "is-system-running"]
-            process = subprocess.run(
-                ["lxc", "exec", self.name, "--"] + ask_if_running,
-                stderr=subprocess.PIPE,
-                stdout=subprocess.PIPE
-            )
-            state = process.stdout.decode().strip()
+            try:
+                out = self.execute(ask_if_running, stderr=False)
+            except LxcError as err:
+                out = str(err)
+            state = out.strip()
     
     def update_apt(self):
         self.wait_for_startup()
-        self.run(["apt","update"], inside=True)
+        self.execute(["apt","update"])
     
     def install(self, module:str):
         self.wait_for_startup()
-        self.run(["apt","install","-y",module], inside=True)
+        self.execute(["apt","install","-y",module])
     
     def publish(self, alias:str=None):
         if self.state != STOPPED:
@@ -152,7 +145,7 @@ class Container:
         cmd = ["lxc", "publish", self.name]
         if alias is not None:
             cmd = cmd + ["--alias", alias]
-        self.run(cmd)
+        lxc.run(cmd)
 
     def push(self, file:str, to_path:str):
         self.wait_for_startup()
@@ -161,7 +154,7 @@ class Container:
         if to_path.endswith("/"):
             to_path = to_path[:-1]
         c_path = f"{self.name}/{to_path}/{file}"
-        self.run(["lxc", "file", "push", file, c_path])
+        lxc.run(["lxc", "file", "push", file, c_path])
      
     def start(self):
         """Arranca el contenedor
@@ -177,7 +170,7 @@ class Container:
             err = (f" {self.tag} '{self.name}' esta " +
                         f"'{self.state}' y no puede ser arrancado")
             raise LxcError(err)
-        self.run(["lxc", "start", self.name])  
+        lxc.run(["lxc", "start", self.name])  
         self.state = RUNNING
         
     def stop(self):
@@ -194,7 +187,7 @@ class Container:
             err = (f" {self.tag} '{self.name}' esta " +
                         f"'{self.state}' y no puede ser detenido")
             raise LxcError()
-        self.run(["lxc", "stop", self.name, "--force"])  
+        lxc.run(["lxc", "stop", self.name, "--force"])  
         self.state = STOPPED
         
     def delete(self):
@@ -207,7 +200,7 @@ class Container:
             err = (f" {self.tag} '{self.name}' esta " +
                         f"'{self.state}' y no puede ser eliminado")
             raise LxcError(err)
-        self.run(["lxc", "delete", self.name])  
+        lxc.run(["lxc", "delete", self.name])  
         self.state = DELETED
     
     def pause(self):
@@ -224,7 +217,7 @@ class Container:
             err = (f" {self.tag} '{self.name}' esta " +
                         f"'{self.state}' y no puede ser pausado")
             raise LxcError(err)
-        self.run(["lxc", "pause", self.name])  
+        lxc.run(["lxc", "pause", self.name])  
         self.state = FROZEN
     
     def __str__(self):
@@ -235,10 +228,4 @@ class Container:
             str: reperesentacion del contenedor en forma string
         """
         return self.name
-    
 # --------------------------------------------------------------------        
-class LxcError(Exception):
-    """Excepcion personalizada para los errores al manipular 
-    contenedores de lxc"""
-    pass
-# --------------------------------------------------------------------
