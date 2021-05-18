@@ -142,6 +142,7 @@ def update_haproxycfg():
     for c in cs:
         if c.tag == TAG:
             lb = c
+            break
     if lb is None: return
     # Miramos si el lb esta arrancado para actualizar (si no lo 
     # haremos la proxima vez que arranque) y si lo esta esperamos
@@ -151,7 +152,7 @@ def update_haproxycfg():
     # Actualizamos el fichero
     lb_logger.info(" Actualizando el fichero haproxy del balanceador...")
     lb_logger.info(" Esperando startup del balanceador...")
-    c.wait_for_startup()
+    lb.wait_for_startup()
     lb_logger.info(" Startup finalizado")
     # Procedemos a configurar el fichero de haproxy
     config = (
@@ -183,7 +184,7 @@ def update_haproxycfg():
     # Creamos el fichero haproxy.cfg lo enviamos al contenedor y
     # eliminamos el fichero que ya no nos hace falta
     try:
-        path = "/etc/haproxy/"; file_name= "haproxy.cfg"
+        path = "/etc/haproxy/"; file_name = "haproxy.cfg"
         with open(file_name, "w") as file:
             file.write(configured_file)
         lb.push(file_name, path)
@@ -194,4 +195,29 @@ def update_haproxycfg():
         err_msg = f" Fallo al configurar el fichero haproxy: {err}" 
         lb_logger.error(err_msg)
     remove("haproxy.cfg")
+    
 # --------------------------------------------------------------------
+def change_algorithm(algorithm:str):
+    global default_algorithm
+    cs = register.load(containers.ID)
+    if cs is None: 
+        lb_logger.error(" No existen contenedores en la plataforma")
+        return
+    lb = None
+    for c in cs:
+        if c.tag == TAG:
+            lb = c
+            break
+    if lb == None:
+        err = " No existe un balanceador de carga en la plataforma"
+        lb_logger.error(err)
+        return
+    if lb.state != "RUNNING":
+        lb_logger.error(" El balanceador no se encuentra arrancado")
+        return
+    lb.algorithm = algorithm
+    register.update(containers.ID, cs)
+    update_haproxycfg()
+# --------------------------------------------------------------------
+    
+    

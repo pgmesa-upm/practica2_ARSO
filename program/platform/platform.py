@@ -121,5 +121,5 @@ def is_imageconfig_needed(reg_id_ofimage:str) -> bool:
                     "borrado desde fuera del programa")
             plt_logger.debug(msg)
             register.remove(reg_id)
-            return True
+            return True    
 # --------------------------------------------------------------------

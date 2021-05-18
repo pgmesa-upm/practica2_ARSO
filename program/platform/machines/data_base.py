@@ -1,5 +1,6 @@
 
 import logging
+from os import remove
 
 from program.controllers import containers
 from dependencies.register import register
@@ -18,7 +19,7 @@ db_logger = logging.getLogger(__name__)
 # Tag e id de registro para la imagen configurada
 TAG = "data base"; IMG_ID = "db_image"
 # Puerto en que se van a ejecutar
-PORT = 8080
+db_ip = "10.0.0.20"
 # --------------------------------------------------------------------
 def get_database(image:str=None) -> Container:
     # Comprobamos que si hace falta configurar una imagen base para
@@ -39,9 +40,9 @@ def get_database(image:str=None) -> Container:
             if alias == "": image = image_saved["fingerprint"]
     # Creamos los objetos de lo cliente
     db = Container(name, image, tag=TAG)
-    db.add_to_network("eth0", with_ip="10.0.0.20")
+    db.add_to_network("eth0", with_ip=db_ip)
     return db
-
+# --------------------------------------------------------------------
 def _config_image() -> str:
     db_logger.info(" Creando la imagen base de la base de datos...")
     # Vemos que no haya un contenedor con ese nombre ya
@@ -53,20 +54,22 @@ def _config_image() -> str:
     msg = (f" Contenedor usado para crear imagen " + 
           f"de la base de datos -> '{name}'")
     db_logger.debug(msg)
-    db = Container(name, platform.default_image)
+    db_c = Container(name, platform.default_image)
     # Lanzamos el contenedor e instalamos modulos
     db_logger.info(f" Lanzando '{name}'...")
-    db.init(); db.start()
+    db_c.init(); db_c.start()
     db_logger.info(" Instalando mongodb (puede tardar)...")
     try:
-        db.update_apt()
-        db.install("mongodb")
+        db_c.update_apt()
+        db_c.install("mongodb")
         db_logger.info(" mongodb instalado con exito")
     except lxc.LxcError as err:
         err_msg = (" Fallo al instalar mongodb, " + 
                         "error de lxc: " + str(err))
         db_logger.error(err_msg)
         return platform.default_image
+    # Configuramos el mongo file
+    _config_mongofile(db_c)
     # Vemos que no existe una imagen con el alias que vamos a usar
     alias = "mongo_db"
     k = 1
@@ -79,10 +82,10 @@ def _config_image() -> str:
     msg = (f" Publicando imagen base de la base de datos " + 
            f"con alias '{alias}'...")
     db_logger.info(msg)
-    db.stop(); db.publish(alias=alias)
+    db_c.stop(); db_c.publish(alias=alias)
     db_logger.info(" Imagen base de servidores creada\n")
     # Eliminamos el contenedor
-    db.delete()
+    db_c.delete()
     # Guardamos la imagen en el registro y la devolvemos 
     # (obtenemos tambien la huella que le ha asignado lxc)
     images = lxc.lxc_image_list()
@@ -94,5 +97,23 @@ def _config_image() -> str:
     register.add(IMG_ID, image_info)
     return alias
 
-def _config_mongofile(c:Container):
-    pass
+def _config_mongofile(db:Container):
+    msg = " Configurando el fichero mongodb de la base de datos..."
+    db_logger.info(msg)
+    basicfile_path = "program/resources/base_mongodb.conf"
+    with open(basicfile_path, "r") as file:
+        base_file = file.read()
+    old = "bind_ip = 127.0.0.1"
+    new = f"bind_ip = 127.0.0.1,{db_ip}"
+    configured_file = base_file.replace(old, new)
+    try:
+        path = "/etc/"; file_name = "mongodb.conf"
+        with open(file_name, "w") as file:
+            file.write(configured_file)
+        db.push(file_name, path)
+        db_logger.info(" Fichero configurado con exito")
+    except lxc.LxcError as err:
+        err_msg = f" Fallo al configurar el fichero de mongodb: {err}" 
+        db_logger.error(err_msg)
+    remove(file_name)
+    # --------------------------------------------------------------------    

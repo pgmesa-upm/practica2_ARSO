@@ -1,6 +1,5 @@
 
 from contextlib import suppress
-from os import stat
 from time import sleep
 
 from ...lxc import lxc
@@ -124,7 +123,7 @@ class Container:
             err = (f"El contenedor '{self.name}' no se ha arrancado")
             raise LxcError(err)
         state = "initializing"
-        while state != "running" and state != "degraded":
+        while not (state == "running" or state == "degraded"):
             cmd = ["lxc", "exec", self.name, "--"]
             ask_if_running = ["systemctl", "is-system-running"]
             try:
@@ -157,7 +156,18 @@ class Container:
         #"-r" se añade para que se haga de forma recursiva por si 
         # se pasa una carpeta en vez de un fichero
         lxc.run(["lxc", "file", "push", "-r", file, c_path])
-     
+    
+    def pull(self, file_path:str, in_path:str):
+        # Se puede introducir en file "." para que se descarguen todos 
+        # los archivos de la carpeta
+        self.wait_for_startup()
+        if file_path.startswith("/"):
+            file_path = file_path[1:]
+        c_path = f"{self.name}/{file_path}"
+        #"-r" se añade para que se haga de forma recursiva por si 
+        # se pasa una carpeta en vez de un fichero
+        lxc.run(["lxc", "file", "pull", "-r",  c_path, in_path])
+        
     def start(self):
         """Arranca el contenedor
 

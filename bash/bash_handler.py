@@ -136,6 +136,24 @@ def config_cli() -> Cli:
        cli.add_command(remove)
        _commands[cmd_name] = commands_rep.remove
        
+       cmd_name = "change"
+       msg = ("allows to change some features of the platform")
+       change = Command(cmd_name, description=msg, mandatory_opt=True,  multi_opt=False)
+       msg = "changes de balance algorithm of the load balancer"
+       change.add_option("balance", description=msg, extra_arg=True, mandatory=True)
+       cli.add_command(change)
+       _commands[cmd_name] = commands_rep.change
+       
+       cmd_name = "app"
+       msg = ("allows to change some features of the servers application")
+       app = Command(cmd_name, description=msg, mandatory_opt=True,  multi_opt=False)
+       msg = "mark the app index.html of each server to distinguish them"
+       app.add_option("markservs", description=msg)
+       msg = "unmark the app index.html of the servers"
+       app.add_option("unmarkservs", description=msg)
+       cli.add_command(app)
+       _commands[cmd_name] = commands_rep.app
+       
        cmd_name = "show"
        msg = "shows information about the program"
        show = Command(cmd_name, description=msg, mandatory_opt=True, multi_opt=False)
@@ -175,5 +193,8 @@ def config_cli() -> Cli:
        msg = "launches the container"
        launch = Flag("-l", description=msg)
        cli.add_flag(launch)
+       msg = "marks the servers if they are being runned"
+       mark = Flag("-m", description=msg)
+       cli.add_flag(mark)
        return cli
 # --------------------------------------------------------------------

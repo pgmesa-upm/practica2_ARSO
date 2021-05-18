@@ -51,6 +51,8 @@ def start(*target_cs, options={}, flags=[]):
     warn = (" Los servicios de los servidores y/o balanceador puede " +
             "tardar unos cuantos segundos en estar disponibles")
     cmd_logger.warning(warn)
+    if "-m" in flags:
+        app(options={"markservs":[]})
         
 # --------------------------------------------------------------------
 @target_containers(cmd_logger) 
@@ -369,6 +371,19 @@ def destroy(options={}, flags=[]):
         cmd_logger.error(msg)
             
 # --------------------------------------------------------------------   
+def change(options={}, flags={}):
+    if "balance" in options:
+        algorithm = options["balance"][0]
+        load_balancer.change_algorithm(algorithm)
+
+# --------------------------------------------------------------------       
+def app(options={}, flags={}):
+    if "markservs" in options:
+        servers.mark_htmlindexes()
+    elif "unmarkservs" in options:
+        servers.mark_htmlindexes(undo=True)
+        
+# -------------------------------------------------------------------- 
 def show(options={}, flags={}):
     """Muestra informacion sobre el programa
 

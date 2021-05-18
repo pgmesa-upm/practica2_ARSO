@@ -1,5 +1,7 @@
 
+import os
 import logging
+from contextlib import suppress
 
 from program.controllers import containers
 from dependencies.register import register
@@ -124,6 +126,64 @@ def _config_image() -> str:
     register.add(IMG_ID, image_info)
     return alias
 
+# --------------------------------------------------------------------
+def mark_htmlindexes(undo=False):
+    # Para modificar el index.html de la aplicacion de cada servidor
+    # y ver quien es quien. Replace elimina el index.html que haya
+    # en el contenedor
+    cs = register.load(containers.ID)
+    if cs is None:
+        serv_logger.error(" No hay contenedores creados")
+        return
+    servs = list(filter(
+        lambda c: c.tag == TAG and c.state == "RUNNING",
+        cs
+    ))
+    if len(servs) == 0:
+        serv_logger.error(" No hay servidores en funcionamiento")
+        return
+    word1 = "Marcando"
+    if undo:
+        word1 = "Desmarcando"
+    serv_logger.info(f" {word1} servidores...")
+    index_dir = "/var/lib/tomcat8/webapps/ROOT/"
+    index_path = index_dir+"index.html"
+    for s in servs:
+        try:
+            if s.marked and not undo: 
+                serv_logger.error(f" El servidor {s.name} ya esta marcado")
+                continue
+            if not s.marked and undo:
+                serv_logger.error(f" El servidor {s.name} no esta marcado")
+                continue
+        except:
+            if undo: 
+                serv_logger.error(f" El servidor {s.name} no esta marcado")
+                continue
+        serv_logger.info(f" {word1} servidor '{s.name}'")
+        pulled_file = "index.html"
+        s.pull(index_path, pulled_file)
+        with open(pulled_file, "r") as file:
+            index = file.read()
+        old = "<html>"
+        new = f"<html><h1> Servidor {s.name} </h1>"
+        if undo:
+            old = new
+            new = "<html>"
+        configured_index = index.replace(old, new)
+        with open(pulled_file, "w") as f:
+            f.write(configured_index)  
+        s.push(pulled_file, index_dir)
+        if undo:
+            s.marked = False
+        else:
+            setattr(s, "marked", True)
+        word2 = word1.lower().replace("n", "")
+        serv_logger.info(f" Servidor '{s.name}' {word2}")
+        os.remove("index.html")
+    register.update(containers.ID, cs)
+        
+# --------------------------------------------------------------------
 def _process_names(num:int, *names) -> list:
     """Se encarga de proporcionar una lista con nombres validos 
     para los contenedores que se vayan a crear. Mira en el registro
@@ -162,3 +222,4 @@ def _process_names(num:int, *names) -> list:
         server_names.append(name)
     return server_names
 # --------------------------------------------------------------------
+
