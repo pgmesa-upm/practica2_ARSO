@@ -22,10 +22,8 @@ lb_logger = logging.getLogger(__name__)
 TAG = "load balancer"; IMG_ID = "lb_image" 
 # Algoritmo de balanceo de trafico
 default_algorithm = "roundrobin"
-# Puerto para que se conecte el cliente
+# Puerto en el que se va a ejecutar para aceptar conexiones de clientes
 PORT = 80
-# Imagen por defecto sobre la que se va a realizar la configuracion
-default_image = "ubuntu:18.04"
 # --------------------------------------------------------------------
 def get_lb(image:str=None, balance=None) -> Container:
     """Devuelve el objeto del LB configurado
@@ -55,7 +53,12 @@ def get_lb(image:str=None, balance=None) -> Container:
     msg = (f" Creando balanceador con imagen '{image}' " + 
            f"y algoritmo de balanceo '{balance}'")
     lb_logger.debug(msg)
-    lb = Container("lb", image, tag=TAG)
+    name = "lb"
+    j = 1
+    while name in lxc.lxc_list():
+        name = f"lb{j}"
+        j += 1
+    lb = Container(name, image, tag=TAG)
     lb.add_to_network("eth0", with_ip="10.0.0.10")
     lb.add_to_network("eth1", with_ip="10.0.1.10")
     setattr(lb, "port", PORT)
@@ -79,7 +82,7 @@ def _config_image() -> str:
         j += 1
     msg = f" Contenedor usado para crear la imagen del lb -> '{name}'"
     lb_logger.debug(msg)
-    lb_c = Container(name, default_image, tag=TAG)
+    lb_c = Container(name, platform.default_image, tag=TAG)
     # Lanzamos el contenedor e instalamos modulos
     lb_logger.info(f" Lanzando '{name}'...")
     lb_c.init(); lb_c.start()
@@ -89,9 +92,10 @@ def _config_image() -> str:
         lb_c.install("haproxy")
         lb_c.execute(["service","haproxy","start"])
     except lxc.LxcError as err:
-        err_msg = " Fallo al instalar haproxy, error de lxc: " + str(err)
+        err_msg = (" Fallo al instalar haproxy, " + 
+                            "error de lxc: " + str(err))
         lb_logger.error(err_msg)
-        return default_image
+        return platform.default_image
     # Configuramos el netfile
     lb_c.add_to_network("eth0")
     lb_c.add_to_network("eth1")
@@ -152,7 +156,7 @@ def update_haproxycfg():
     # Procedemos a configurar el fichero de haproxy
     config = (
          "\n\nfrontend firstbalance\n" +
-        f"        bind *:{PORT}\n" +
+        f"        bind *:{lb.port}\n" +
          "        option forwardfor\n" +
          "        default_backend webservers\n" +
          "backend webservers\n" +
@@ -163,14 +167,13 @@ def update_haproxycfg():
         cs
     ))
     for i, s in enumerate(servs):
-        l = f"        server webserver{i+1} {s.name}:{servers.PORT}\n"
+        l = f"        server webserver{i+1} {s.name}:{s.port}\n"
         config += l
     for i, s in enumerate(servs):
-        l = f"        server webserver{i+1} {s.name}:{servers.PORT} check\n"
+        l = f"        server webserver{i+1} {s.name}:{s.port} check\n"
         config += l
     config += "        option httpchk"
     lb_logger.debug(config)
-    path = "/etc/haproxy/"; file_name= "haproxy.cfg"
     # Leemos la info basica del fichero basic_haproxy.cfg
     basicfile_path = "program/resources/base_haproxy.cfg"
     with open(basicfile_path, "r") as file:
@@ -179,10 +182,11 @@ def update_haproxycfg():
     configured_file = base_file + config
     # Creamos el fichero haproxy.cfg lo enviamos al contenedor y
     # eliminamos el fichero que ya no nos hace falta
-    with open(file_name, "w") as file:
-        file.write(configured_file)
-    lb.push(file_name, path)
     try:
+        path = "/etc/haproxy/"; file_name= "haproxy.cfg"
+        with open(file_name, "w") as file:
+            file.write(configured_file)
+        lb.push(file_name, path)
         lb.execute(["haproxy", "-f", path+file_name, "-c"])
         lb.execute(["service","haproxy","restart"])
         lb_logger.info(" Fichero haproxy actualizado con exito")

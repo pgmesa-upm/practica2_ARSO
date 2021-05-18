@@ -45,8 +45,8 @@ def config_cli() -> Cli:
               "deploys a server platform\n           with the number " +
               "of servers especified (if void, 2 servers are created). It\n " + 
               "          also initializes a load balancer that acts as a bridge " +
-              "between the servers.\n           Everything is " +
-              "connected by 2 virtual bridges"
+              "between the servers\n           and a data base for storing data. " + 
+              "Everything is connected by 2 virtual bridges"
        )
        deploy = Command(cmd_name, description=msg, extra_arg=True, 
                                    choices=[1,2,3,4,5], default=2)
@@ -72,6 +72,10 @@ def config_cli() -> Cli:
        msg = "<alias or fingerprint> allows to specify the image of the client"
        deploy.add_option(
               "--climage", description=msg, extra_arg=True, mandatory=True
+       )
+       msg = "<alias or fingerprint> allows to specify the image of the data base"
+       deploy.add_option(
+              "--dbimage", description=msg, extra_arg=True, mandatory=True
        )
        msg = ("allows to specify the balance algorithm of the load balancer," + 
               "\n                      by default it uses 'roundrobin'")

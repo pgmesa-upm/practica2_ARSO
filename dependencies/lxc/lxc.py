@@ -19,7 +19,7 @@ class LxcNetworkError(Exception):
     pass
 
 # --------------------------------------------------------------------
-def run(cmd:list, stdout=True, stderr=True):
+def run(cmd:list, stdout=True, stderr=True) -> str:
     """Ejecuta un comando mediante subprocess y controla los 
     errores que puedan surgir. Espera a que termine el proceso
     (Llamada bloqueante)
@@ -62,7 +62,7 @@ def Popen(cmd:list):
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
 def _lxc_generic_list(cmd:list, print_:bool=False, 
-                                print_format:str="table"):
+                                print_format:str="table") -> dict:
     if print_format not in _lxc_list_formats:
         raise LxcError(f" El formato {print_format} no es valido")
     out = run(cmd + ["--format", print_format])
@@ -78,7 +78,7 @@ def _lxc_generic_list(cmd:list, print_:bool=False,
     return process_lxctable(table)
 
 def lxc_list(print_:bool=False, print_format:str="table",
-                        ips_to_wait:int=0, time_out:int=10):
+                        ips_to_wait:int=0, time_out:int=10) -> dict:
     """Se encarga de mostrar la lista de contenedores de lxc, pero 
     en caso de estar arrancados, como la ip tarda un rato en
     aparecer, la funcion espera a que se haya cargado toda la
@@ -126,7 +126,7 @@ def lxc_list(print_:bool=False, print_format:str="table",
         rearranged_dict[name]["IPV4"] = nets
     return rearranged_dict
     
-def lxc_network_list(print_=False, print_format="table"):
+def lxc_network_list(print_=False, print_format="table") -> dict:
     """Muestra la network list de lxc (bridges creados)"""
     dic = _lxc_generic_list(
         ["lxc", "network", "list"],
@@ -146,7 +146,7 @@ def lxc_network_list(print_=False, print_format="table"):
             rearranged_dict.update({k: new_page})
     return rearranged_dict
 
-def lxc_image_list(print_=False, print_format="table"):
+def lxc_image_list(print_=False, print_format="table") -> dict:
     dic = _lxc_generic_list(
         ["lxc", "image", "list"],
         print_=print_, 

@@ -13,7 +13,8 @@
         "vscode_config": "vscode",
         "platform": "Expo",
         "machines": "Serverless",
-        "lxc": "Docker"
+        "lxc": "Docker",
+        "ROOT": "Views"
         
     }
 }

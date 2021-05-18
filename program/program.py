@@ -227,9 +227,9 @@ def _check_containers():
             current_nets = cs_info[c.name]["IPV4"]
             for eth, ip in c.networks.items():
                 if eth not in current_nets:
-                    warn = (f" La ethernet '{eth}' de '{c.name}' se ha " + 
-                            "modificado desde fuera del programa o hay " + 
-                            f"algun error ya que el contenedor esta " +
+                    warn = (f" La tarjeta de red '{eth}' de '{c.name}' " + 
+                            "se ha modificado desde fuera del programa o " + 
+                            f"hay algun error ya que el contenedor esta " +
                             "arrancado pero lxc no muestra la conexion " +
                             "(informacion actualizada)")
                     c.connected_networks[eth] = False

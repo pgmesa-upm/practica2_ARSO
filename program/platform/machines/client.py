@@ -15,13 +15,15 @@ from dependencies.register import register
 cl_logger = logging.getLogger(__name__)
 # Tag e id de registro para la imagen configurada
 TAG = "client"; IMG_ID = "cl_image"
-# Imagen por defecto sobre la que se va a realizar la configuracion
-default_image = "ubuntu:18.04"
 # --------------------------------------------------------------------
 def get_client(name="cl",image:str=None) -> Container:
     # Comprobamos que si hace falta configurar una imagen base para
     # el cliente o ya nos han pasado una o se ha creado antes 
     # y esta disponible
+    j = 1
+    while name in lxc.lxc_list():
+        name = f"cl{j}"
+        j += 1
     if image is None:
         if platform.is_imageconfig_needed(IMG_ID):
             image = _config_image()
@@ -47,19 +49,20 @@ def _config_image() -> str:
     msg = (f" Contenedor usado para crear imagen " + 
           f"de clientes -> '{name}'")
     cl_logger.debug(msg)
-    cl = Container(name, default_image)
+    cl = Container(name, platform.default_image)
     # Lanzamos el contenedor e instalamos modulos
     cl_logger.info(f" Lanzando '{name}'...")
     cl.init(); cl.start()
     cl_logger.info(" Instalando lynx (puede tardar)...")
-    cl.update_apt()
     try:
+        cl.update_apt()
         cl.install("lynx")
         cl_logger.info(" lynx instalado con exito")
     except lxc.LxcError as err:
-        err_msg = " Fallo al instalar lynx, error de lxc: " + str(err)
+        err_msg = (" Fallo al instalar lynx, " + 
+                            "error de lxc: " + str(err))
         cl_logger.error(err_msg)
-        return default_image
+        return platform.default_image
     # Vemos que no existe una imagen con el alias que vamos a usar
     alias = "lynx_client"
     k = 1

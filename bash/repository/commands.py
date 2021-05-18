@@ -279,13 +279,18 @@ def deploy(numServs:int, options={}, flags=[]):
     bgs_s = concat_array(succesful_bgs)
     cmd_logger.info(f" Bridges '{bgs_s}' creados\n")
     # Creando contenedores
-    lbimage = None; climage = None; extra = []
+    lbimage = None; climage = None; dbimage=None; extra = []
     if "--image" in options:
         lbimage = options["--image"][0]
-        climage = options["--climage"][0]
+        climage = options["--image"][0]
+        dbimage = options["--image"][0]
     # Configurmaos balanceador
     if "--lbimage" in options:
         lbimage = options["--lbimage"][0]
+    if "--dbimage" in options:
+        dbimage = options["--dbimage"][0]
+    db = data_base.get_database(image=dbimage)
+    extra.append(db)
     algorithm = None
     if "--balance" in options:
         algorithm = options["--balance"][0]

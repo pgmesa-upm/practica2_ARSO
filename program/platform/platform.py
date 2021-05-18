@@ -1,5 +1,6 @@
 
 import logging
+from program.platform.machines import data_base
 
 from dependencies.utils.tools import pretty, objectlist_as_dict
 from dependencies.lxc import lxc
@@ -62,7 +63,7 @@ def update_conexions():
                 bridges.attach(c.name, bgs_dict["lxdbr0"], "eth0")
             if not c.connected_networks["eth1"]:
                 bridges.attach(c.name, bgs_dict["lxdbr1"], "eth1")
-        elif c.tag == servers.TAG:
+        elif c.tag == servers.TAG or c.tag == data_base.TAG:
             if not c.connected_networks["eth0"]:
                 bridges.attach(c.name, bgs_dict["lxdbr0"], "eth0")
         elif c.tag == client.TAG:
@@ -122,5 +123,3 @@ def is_imageconfig_needed(reg_id_ofimage:str) -> bool:
             register.remove(reg_id)
             return True
 # --------------------------------------------------------------------
-def create_imageof(c_tag, modules:list=None, networks=None):
-    pass

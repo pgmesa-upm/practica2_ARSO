@@ -19,8 +19,6 @@ serv_logger = logging.getLogger(__name__)
 TAG = "server"; IMG_ID = "s_image"
 # Puerto en que se van a ejecutar
 PORT = 8080
-# Imagen por defecto sobre la que se va a realizar la configuracion
-default_image = "ubuntu:18.04"
 # --------------------------------------------------------------------
 def get_servers(num:int, *names, image:str=None) -> list:
     """Devuelve los objetos de los servidores que se vayan a crear 
@@ -70,7 +68,7 @@ def get_servers(num:int, *names, image:str=None) -> list:
         servers.append(server)
     return servers
 
-def _config_image():
+def _config_image() -> str:
     serv_logger.info(" Creando la imagen base de los servidores...")
     # Vemos que no haya un contenedor con ese nombre ya
     name = "servconfig"
@@ -81,20 +79,24 @@ def _config_image():
     msg = (f" Contenedor usado para crear imagen " + 
           f"de servidores -> '{name}'")
     serv_logger.debug(msg)
-    serv = Container(name, default_image)
+    serv = Container(name, platform.default_image)
     # Lanzamos el contenedor e instalamos modulos
     serv_logger.info(f" Lanzando '{name}'...")
     serv.init(); serv.start()
     serv_logger.info(" Instalando tomcat8 (puede tardar)...")
-    serv.update_apt()
     try:
+        serv.update_apt()
         serv.install("tomcat8")
         serv_logger.info(" Tomcat8 instalado con exito")
     except lxc.LxcError as err:
-        err_msg = " Fallo al instalar tomcat8, error de lxc: " + str(err)
+        err_msg = (" Fallo al instalar tomcat8, " + 
+                            "error de lxc: " + str(err))
         serv_logger.error(err_msg)
-        return default_image
-      
+        return platform.default_image
+    # Añadimos la aplicacion a los servidores 
+    path = "/var/lib/tomcat8/webapps/"
+    serv.execute(["rm", "-rf", path+"ROOT"])
+    serv.push("program/resources/ROOT", path)
     # Vemos que no existe una imagen con el alias que vamos a usar
     alias = "tomcat8_serv"
     k = 1

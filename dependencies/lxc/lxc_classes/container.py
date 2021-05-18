@@ -38,6 +38,7 @@ class Container:
         Args:
             cmd (list): Comando a ejecutar
         """
+        self.wait_for_startup()
         cmd = ["lxc", "exec", self.name, "--"] + cmd
         out = lxc.run(cmd, stdout=stdout, stderr=stderr)  
         return out  
@@ -119,22 +120,23 @@ class Container:
         hace un start del contenedor (puede haber fallos si no todos
         los archivos se han creado o no todo ha acabado de 
         configurarse)"""
-        if self.state != RUNNING: return
+        if self.state != RUNNING: 
+            err = (f"El contenedor '{self.name}' no se ha arrancado")
+            raise LxcError(err)
         state = "initializing"
         while state != "running" and state != "degraded":
+            cmd = ["lxc", "exec", self.name, "--"]
             ask_if_running = ["systemctl", "is-system-running"]
             try:
-                out = self.execute(ask_if_running, stderr=False)
+                out = lxc.run(cmd + ask_if_running, stderr=False)
             except LxcError as err:
                 out = str(err)
             state = out.strip()
     
     def update_apt(self):
-        self.wait_for_startup()
         self.execute(["apt","update"])
     
     def install(self, module:str):
-        self.wait_for_startup()
         self.execute(["apt","install","-y",module])
     
     def publish(self, alias:str=None):
@@ -151,10 +153,10 @@ class Container:
         self.wait_for_startup()
         if to_path.startswith("/"):
             to_path = to_path[1:]
-        if to_path.endswith("/"):
-            to_path = to_path[:-1]
-        c_path = f"{self.name}/{to_path}/{file}"
-        lxc.run(["lxc", "file", "push", file, c_path])
+        c_path = f"{self.name}/{to_path}"
+        #"-r" se añade para que se haga de forma recursiva por si 
+        # se pasa una carpeta en vez de un fichero
+        lxc.run(["lxc", "file", "push", "-r", file, c_path])
      
     def start(self):
         """Arranca el contenedor

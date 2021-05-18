@@ -112,10 +112,10 @@ def configure_netfile(c:Container):
     file2 = "99-disable-network-config.cfg"
     with open(file1, "w") as file:
         file.write(config_file)
-    path1 = "etc/netplan"
+    path1 = "/etc/netplan/"
     with open(file2, "w") as file:
         file.write("network: {config: disabled}")
-    path2 = "etc/cloud/cloud.cfg.d"
+    path2 = "/etc/cloud/cloud.cfg.d/"
     c.push(file1, path1)
     c.push(file2, path2)
     msg = f" Net del {c.tag} '{c.name}' configurada con exito"
