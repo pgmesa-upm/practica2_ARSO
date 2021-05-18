@@ -41,8 +41,8 @@ def run(cmd:list, stdout=True, stderr=True) -> str:
     if outcome != 0:
         err_msg = f" Fallo al ejecutar el comando {cmd}"
         if stderr:
-            err = process.stderr.decode()
-            err_msg += f"\n Mensaje de error de lxc: -> {err}"
+            err = process.stderr.decode()[:-1]
+            err_msg += f"\nMensaje de error de lxc: -> {err}"
         elif stdout:
             err_msg = process.stdout.decode()
         if "network" in cmd:

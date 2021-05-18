@@ -135,10 +135,7 @@ def mark_htmlindexes(undo=False):
     if cs is None:
         serv_logger.error(" No hay contenedores creados")
         return
-    servs = list(filter(
-        lambda c: c.tag == TAG and c.state == "RUNNING",
-        cs
-    ))
+    servs = list(filter(lambda c: c.tag == TAG,cs))
     if len(servs) == 0:
         serv_logger.error(" No hay servidores en funcionamiento")
         return
@@ -149,6 +146,9 @@ def mark_htmlindexes(undo=False):
     index_dir = "/var/lib/tomcat8/webapps/ROOT/"
     index_path = index_dir+"index.html"
     for s in servs:
+        if s.state != "RUNNING":
+            serv_logger.error(f" El servidor {s.name} no esta arrancado")
+            continue
         try:
             if s.marked and not undo: 
                 serv_logger.error(f" El servidor {s.name} ya esta marcado")
@@ -162,7 +162,13 @@ def mark_htmlindexes(undo=False):
                 continue
         serv_logger.info(f" {word1} servidor '{s.name}'")
         pulled_file = "index.html"
-        s.pull(index_path, pulled_file)
+        try:  
+            s.pull(index_path, pulled_file)
+        except lxc.LxcError as err:
+            err_msg = (f" Error al descargar el index.html " + 
+                                f"del contenedor '{s.name}':" + str(err))
+            serv_logger.error(err_msg)
+            return
         with open(pulled_file, "r") as file:
             index = file.read()
         old = "<html>"
@@ -172,8 +178,14 @@ def mark_htmlindexes(undo=False):
             new = "<html>"
         configured_index = index.replace(old, new)
         with open(pulled_file, "w") as f:
-            f.write(configured_index)  
-        s.push(pulled_file, index_dir)
+            f.write(configured_index)
+        try:  
+            s.push(pulled_file, index_dir)
+        except lxc.LxcError as err:
+            err_msg = (f" Error al enviar el index.html marcado" + 
+                                f"al contenedor '{s.name}':" + str(err))
+            serv_logger.error(err_msg)
+            return
         if undo:
             s.marked = False
         else:

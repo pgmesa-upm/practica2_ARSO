@@ -92,7 +92,13 @@ def print_state():
             print(pretty(b))
     else:
         print("No hay bridges creados en la plataforma")
-        
+
+def print_info():
+    print("""
+    Este es el texto que se va a imprimir
+    --> Rellenar.
+    """)
+  
 # --------------------------------------------------------------------
 def is_imageconfig_needed(reg_id_ofimage:str) -> bool:
     reg_id = reg_id_ofimage
