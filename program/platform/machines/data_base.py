@@ -83,7 +83,7 @@ def _config_image() -> str:
            f"con alias '{alias}'...")
     db_logger.info(msg)
     db_c.stop(); db_c.publish(alias=alias)
-    db_logger.info(" Imagen base de servidores creada\n")
+    db_logger.info(" Imagen base de la base de datos creada\n")
     # Eliminamos el contenedor
     db_c.delete()
     # Guardamos la imagen en el registro y la devolvemos 
