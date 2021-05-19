@@ -139,7 +139,7 @@ def config_cli() -> Cli:
        cmd_name = "change"
        msg = ("allows to change some features of the platform")
        change = Command(cmd_name, description=msg, mandatory_opt=True,  multi_opt=False)
-       msg = "changes de balance algorithm of the load balancer"
+       msg = "changes the balance algorithm of the load balancer"
        change.add_option("balance", description=msg, extra_arg=True, mandatory=True)
        cli.add_command(change)
        _commands[cmd_name] = commands_rep.change
@@ -151,6 +151,11 @@ def config_cli() -> Cli:
        app.add_option("markservs", description=msg)
        msg = "unmark the app index.html of the servers"
        app.add_option("unmarkservs", description=msg)
+       msg = ("<absolute path of the new app> changes the application that will be " + 
+              "\n                      displayed by the servers")
+       app.add_option("replacewith", description=msg, extra_arg=True, mandatory=True)
+       msg = ("changes the application to the default one")
+       app.add_option("usedefault", description=msg)
        cli.add_command(app)
        _commands[cmd_name] = commands_rep.app
        

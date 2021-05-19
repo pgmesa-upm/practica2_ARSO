@@ -194,6 +194,42 @@ def mark_htmlindexes(undo=False):
         serv_logger.info(f" Servidor '{s.name}' {word2}")
         os.remove("index.html")
     register.update(containers.ID, cs)
+
+def change_app(app_path):
+    cs = register.load(containers.ID)
+    if cs is None:
+        serv_logger.error(" No hay contenedores creados")
+        return
+    servs = list(filter(lambda c: c.tag == TAG,cs))
+    if len(servs) == 0:
+        serv_logger.error(" No hay servidores en funcionamiento")
+        return
+    webapps_dir = "/var/lib/tomcat8/webapps/"
+    root_dir = "/var/lib/tomcat8/webapps/ROOT"
+    for s in servs:
+        if s.state != "RUNNING":
+            serv_logger.error(f" El servidor {s.name} no esta arrancado")
+            continue
+        serv_logger.info(f" Actualizando aplicacion de servidor '{s.name}'")
+        try: 
+            # Eliminamos la aplicacion anterior
+            s.execute(["rm", "-rf", root_dir])
+        except lxc.LxcError as err:
+            err_msg = (f" Error al eliminar la aplicacion anterior: {err}")
+            serv_logger.error(err_msg)
+            return
+        try:
+            s.push(app_path, webapps_dir)
+        except lxc.LxcError as err:
+            err_msg = (f" Error al añadir la aplicacion: {err}")
+            serv_logger.error(err_msg)
+            return
+        msg = (f" Actualizacion de aplicacion de servidor '{s.name}' " + 
+                    "realizada con exito")
+        with suppress(Exception):
+            s.marked = False
+        register.update(containers.ID, cs)
+        serv_logger.info(msg)
         
 # --------------------------------------------------------------------
 def _process_names(num:int, *names) -> list:

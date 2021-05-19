@@ -12,7 +12,8 @@ class Cli:
         self.commands = {}
         self.flags = {"-h": Flag(
             "-h", 
-            description="shows information about the commands available"
+            description=("shows information about a command or all of " +
+                        "them if a valid one is not introduced")
         )}
         
     def add_command(self, command:Command):
@@ -50,8 +51,11 @@ class Cli:
                 alguno)
         """
         args.pop(0) # Eliminamos el nombre del programa
-        if "-h" in args: 
-            self.printHelp()
+        if "-h" in args:
+            cmd = None
+            if args[0] in self.commands:
+                cmd = self.commands[args[0]]
+            self.printHelp(command=cmd)
             return None
         # Miramos a ver si alguno de los flags validos esta en la 
         # linea de comandos introducida
@@ -190,19 +194,23 @@ class Cli:
         inFlags = list(map(lambda flag: str(flag), inFlags))
         return inFlags
       
-    def printHelp(self):
+    def printHelp(self, command=None):
         """Imprime las descripciones de cada comando y flag de la cli
         de forma estructurada"""
+        commands = self.commands.values()
+        if command is not None:
+            commands = [command]
         print(" python3 __main__ [commands] <parameters> " + 
                                     "[options] <parameters> [flags]")
         print(" + Commands: ")
-        for arg in self.commands.values():
-            print(f"    -> {arg.name} --> {arg.description}")
-            if len(arg.options) > 0:
+        for cmd in commands:
+            print(f"    -> {cmd.name} --> {cmd.description}")
+            if len(cmd.options) > 0:
                 print(f"        - options:")
-                for opt in arg.options.values():
+                for opt in cmd.options.values():
                     info = f"=> '{opt.name}' --> {opt.description}"
                     print("          ", info)
+        if command is not None: return
         print(" + Flags: ")   
         for flag in self.flags.values():
             if not flag.description == None:

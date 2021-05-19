@@ -382,6 +382,11 @@ def app(options={}, flags={}):
         servers.mark_htmlindexes()
     elif "unmarkservs" in options:
         servers.mark_htmlindexes(undo=True)
+    elif "replacewith" in options:
+        print(options["replacewith"][0])
+        servers.change_app(options["replacewith"][0])
+    elif "usedefault" in options:
+        servers.change_app("program/resources/ROOT")
         
 # -------------------------------------------------------------------- 
 def show(options={}, flags={}):
