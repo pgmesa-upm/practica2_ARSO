@@ -176,7 +176,7 @@ def update_haproxycfg():
     config += "        option httpchk"
     lb_logger.debug(config)
     # Leemos la info basica del fichero basic_haproxy.cfg
-    basicfile_path = "program/resources/base_haproxy.cfg"
+    basicfile_path = "program/resources/config_files/base_haproxy.cfg"
     with open(basicfile_path, "r") as file:
         base_file = file.read()
     # Juntamos los ficheros

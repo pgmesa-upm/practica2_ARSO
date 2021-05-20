@@ -1,14 +1,13 @@
 
-import os
+
 import logging
-from contextlib import suppress
 
 from program.controllers import containers
 from dependencies.register import register
 from dependencies.lxc.lxc_classes.container import Container
-from dependencies.utils.tools import objectlist_as_dict
 from dependencies.lxc import lxc
 from program.platform import platform
+from program import apps
 # --------------------------- SERVIDORES -----------------------------
 # --------------------------------------------------------------------
 # Este fichero se encarga de proporcionar funciones para crear y 
@@ -67,6 +66,8 @@ def get_servers(num:int, *names, image:str=None) -> list:
         ips.append(ip)
         server.add_to_network("eth0", with_ip=ip)
         setattr(server, "port", PORT)
+        setattr(server, "app", apps.get_defaultapp())
+        setattr(server, "marked", True)
         servers.append(server)
     return servers
 
@@ -98,7 +99,8 @@ def _config_image() -> str:
     # Añadimos la aplicacion a los servidores 
     path = "/var/lib/tomcat8/webapps/"
     serv.execute(["rm", "-rf", path+"ROOT"])
-    serv.push("program/resources/ROOT", path)
+    default_app = apps.get_defaultapp()
+    serv.push(f"program/resources/default/{default_app}/ROOT", path)
     # Vemos que no existe una imagen con el alias que vamos a usar
     alias = "tomcat8_serv"
     k = 1
@@ -125,111 +127,6 @@ def _config_image() -> str:
     image_info = {"alias": alias, "fingerprint": fingerprint}
     register.add(IMG_ID, image_info)
     return alias
-
-# --------------------------------------------------------------------
-def mark_htmlindexes(undo=False):
-    # Para modificar el index.html de la aplicacion de cada servidor
-    # y ver quien es quien. Replace elimina el index.html que haya
-    # en el contenedor
-    cs = register.load(containers.ID)
-    if cs is None:
-        serv_logger.error(" No hay contenedores creados")
-        return
-    servs = list(filter(lambda c: c.tag == TAG,cs))
-    if len(servs) == 0:
-        serv_logger.error(" No hay servidores en funcionamiento")
-        return
-    word1 = "Marcando"
-    if undo:
-        word1 = "Desmarcando"
-    serv_logger.info(f" {word1} servidores...")
-    index_dir = "/var/lib/tomcat8/webapps/ROOT/"
-    index_path = index_dir+"index.html"
-    for s in servs:
-        if s.state != "RUNNING":
-            serv_logger.error(f" El servidor {s.name} no esta arrancado")
-            continue
-        try:
-            if s.marked and not undo: 
-                serv_logger.error(f" El servidor {s.name} ya esta marcado")
-                continue
-            if not s.marked and undo:
-                serv_logger.error(f" El servidor {s.name} no esta marcado")
-                continue
-        except:
-            if undo: 
-                serv_logger.error(f" El servidor {s.name} no esta marcado")
-                continue
-        serv_logger.info(f" {word1} servidor '{s.name}'")
-        pulled_file = "index.html"
-        try:  
-            s.pull(index_path, pulled_file)
-        except lxc.LxcError as err:
-            err_msg = (f" Error al descargar el index.html " + 
-                                f"del contenedor '{s.name}':" + str(err))
-            serv_logger.error(err_msg)
-            return
-        with open(pulled_file, "r") as file:
-            index = file.read()
-        old = "<html>"
-        new = f"<html><h1> Servidor {s.name} </h1>"
-        if undo:
-            old = new
-            new = "<html>"
-        configured_index = index.replace(old, new)
-        with open(pulled_file, "w") as f:
-            f.write(configured_index)
-        try:  
-            s.push(pulled_file, index_dir)
-        except lxc.LxcError as err:
-            err_msg = (f" Error al enviar el index.html marcado" + 
-                                f"al contenedor '{s.name}':" + str(err))
-            serv_logger.error(err_msg)
-            return
-        if undo:
-            s.marked = False
-        else:
-            setattr(s, "marked", True)
-        word2 = word1.lower().replace("n", "")
-        serv_logger.info(f" Servidor '{s.name}' {word2}")
-        os.remove("index.html")
-    register.update(containers.ID, cs)
-
-def change_app(app_path):
-    cs = register.load(containers.ID)
-    if cs is None:
-        serv_logger.error(" No hay contenedores creados")
-        return
-    servs = list(filter(lambda c: c.tag == TAG,cs))
-    if len(servs) == 0:
-        serv_logger.error(" No hay servidores en funcionamiento")
-        return
-    webapps_dir = "/var/lib/tomcat8/webapps/"
-    root_dir = "/var/lib/tomcat8/webapps/ROOT"
-    for s in servs:
-        if s.state != "RUNNING":
-            serv_logger.error(f" El servidor {s.name} no esta arrancado")
-            continue
-        serv_logger.info(f" Actualizando aplicacion de servidor '{s.name}'")
-        try: 
-            # Eliminamos la aplicacion anterior
-            s.execute(["rm", "-rf", root_dir])
-        except lxc.LxcError as err:
-            err_msg = (f" Error al eliminar la aplicacion anterior: {err}")
-            serv_logger.error(err_msg)
-            return
-        try:
-            s.push(app_path, webapps_dir)
-        except lxc.LxcError as err:
-            err_msg = (f" Error al añadir la aplicacion: {err}")
-            serv_logger.error(err_msg)
-            return
-        msg = (f" Actualizacion de aplicacion de servidor '{s.name}' " + 
-                    "realizada con exito")
-        with suppress(Exception):
-            s.marked = False
-        register.update(containers.ID, cs)
-        serv_logger.info(msg)
         
 # --------------------------------------------------------------------
 def _process_names(num:int, *names) -> list:

@@ -14,7 +14,8 @@
         "platform": "Expo",
         "machines": "Serverless",
         "lxc": "Docker",
-        "ROOT": "Views"
+        "ROOT": "Views",
+        "config_files": "config"
         
     }
 }

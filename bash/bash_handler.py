@@ -151,11 +151,18 @@ def config_cli() -> Cli:
        app.add_option("markservs", description=msg)
        msg = "unmark the app index.html of the servers"
        app.add_option("unmarkservs", description=msg)
-       msg = ("<absolute path of the new app> changes the application that will be " + 
-              "\n                      displayed by the servers")
-       app.add_option("replacewith", description=msg, extra_arg=True, mandatory=True)
-       msg = ("changes the application to the default one")
-       app.add_option("usedefault", description=msg)
+       msg = ("<absolute path> adds an app to the repository")
+       app.add_option("add", description=msg, extra_arg=True, mandatory=True, multi=True)
+       msg = ("<app_name> changes the app of the servers")
+       app.add_option("use", description=msg, extra_arg=True, mandatory=True)
+       msg = ("<app_name> changes the default app of the servers")
+       app.add_option("setdefault", description=msg, extra_arg=True, mandatory=True)
+       msg = ("<app_name> removes an app from the local repository")
+       app.add_option("remove", description=msg, extra_arg=True, mandatory=True)
+       msg = ("lists the apps of repository")
+       app.add_option("list", description=msg)
+       msg = ("clears the apps repository (except default)")
+       app.add_option("emptyrep", description=msg)
        cli.add_command(app)
        _commands[cmd_name] = commands_rep.app
        

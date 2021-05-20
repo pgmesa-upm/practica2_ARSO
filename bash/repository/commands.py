@@ -12,6 +12,7 @@ from program.platform.machines import (
     client,
     data_base
 )
+from program import apps
 from program import program
 from dependencies.register import register
 from dependencies.utils.tools import concat_array
@@ -379,14 +380,23 @@ def change(options={}, flags={}):
 # --------------------------------------------------------------------       
 def app(options={}, flags={}):
     if "markservs" in options:
-        servers.mark_htmlindexes()
+        apps.mark_htmlindexes()
     elif "unmarkservs" in options:
-        servers.mark_htmlindexes(undo=True)
-    elif "replacewith" in options:
-        print(options["replacewith"][0])
-        servers.change_app(options["replacewith"][0])
-    elif "usedefault" in options:
-        servers.change_app("program/resources/ROOT")
+        apps.mark_htmlindexes(undo=True)
+    elif "add" in options:
+        apps.add_app(options["add"][0])
+    elif "use" in options:
+        apps.use_app(options["use"][0])
+        if "-m" in flags:
+            apps.mark_htmlindexes()
+    elif "setdefault" in options:
+        apps.set_default(options["setdefault"][0])
+    elif "list" in options:
+        apps.list_apps()
+    elif "remove" in options:
+        apps.remove_app(options["remove"][0])
+    elif "emptyrep" in options:
+        apps.clear_repository()
         
 # -------------------------------------------------------------------- 
 def show(options={}, flags={}):

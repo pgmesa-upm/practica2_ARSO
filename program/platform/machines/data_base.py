@@ -100,7 +100,7 @@ def _config_image() -> str:
 def _config_mongofile(db:Container):
     msg = " Configurando el fichero mongodb de la base de datos..."
     db_logger.info(msg)
-    basicfile_path = "program/resources/base_mongodb.conf"
+    basicfile_path = "program/resources/config_files/base_mongodb.conf"
     with open(basicfile_path, "r") as file:
         base_file = file.read()
     old = "bind_ip = 127.0.0.1"
