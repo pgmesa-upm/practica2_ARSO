@@ -5,3 +5,5 @@ __pycache__
 50-cloud-init.yaml
 99-disable-network-config.cfg
 haproxy.cfg
+apps/*
+!apps/default
