@@ -13,83 +13,111 @@ from dependencies.utils.tools import concat_array
 
 app_logger = logging.getLogger(__name__)
 # Path relativo (en el programa) al repositorio de aplicaciones
-apps_repo_path = "program/resources/apps/"
+apps_repo_path = "program/resources/apps"
+apps_default_path = f"{apps_repo_path}/default"
 # --------------------------------------------------------------------
 def get_appnames() -> list:
-    return os.listdir(apps_repo_path)
+    apps = os.listdir(apps_repo_path)
+    for i, app in enumerate(apps): 
+        if app == "default":
+            apps[i] = get_defaultapp()
+            break
+    return apps
 
 def get_defaultapp() -> str:
-    default = os.listdir(apps_repo_path+"default")[0]
+    l = os.listdir(apps_default_path)
+    if len(l) > 0:
+        default = l[0]
+    else:
+        return None
     return default
 
 def list_apps():
     default = get_defaultapp()
     apps = get_appnames()
+    ordered_apps = []
     for i, app in enumerate(apps):
-        if app == "default":
-            apps[i] = app + f"({default})"
+        if app == default:
+            ordered_apps.append(f"default({app})")
+            apps.pop(i)
+            break
+    ordered_apps += apps
     print(" + Apps Repository:" )
-    print("     --> ",concat_array(apps,separator=" -- "))
+    print("     --> ",concat_array(ordered_apps,separator=" -- "))
     
-
 # --------------------------------------------------------------------   
 def add_app(path:str, name:str=None):
-    # obtenemos el nombre de la carpeta original
-    parts = path.split("/")
-    last = parts[len(parts) - 1]
-    if last == "":
-        last = parts[len(parts) - 2]
-    # Por si es un fichero en vez de una carpeta
-    if "." in last:
-        file_name = last
-        last = last.split(".")[0]
-    old_dir_name = last
     # Comprobamos que la ruta existe
     if not os.path.exists(path):
-        app_logger.error(f" La ruta absoluta {path} no existe")
+        app_logger.error(f" La ruta absoluta '{path}' no existe")
         return
-    # Creando nueva carpeta
-    if name is None:
-        name = old_dir_name
-    # Comprobamos que no existe una aplicacion con el mismo nombre
-    if name in get_appnames():
-        err_msg = f" EL nombre '{name}' ya existe en el repositorio"
-        app_logger.error(err_msg)
-        return
-    app_path = apps_repo_path + name + "/"
-    app_logger.info(f" Añadiendo app con el nombre '{name}''...")
-    process.run(["mkdir", app_path])
-    if os.path.isfile(path):
-        process.run(["mkdir", app_path+"/ROOT"])
-        app_path += "ROOT/"
-        old_dir_name = "ROOT"
-    try:
-        process.shell(f"cp -r {path} {app_path}")
-        # Cambiamos su nombre a ROOT para que los server tomcat lo
-        # reconozcan al incluirlos en la carpeta webapps
-        if old_dir_name != "ROOT":
-            process.run(
-                ["mv", app_path + old_dir_name, app_path + "ROOT"]
-            )
-        if os.path.isfile(path) and file_name != "index.html":
-            process.run(
-                ["mv", app_path + file_name, app_path + "index.html"]
-            )
-        app_logger.info(f" App '{name}' añadida con exito")
-    except process.ProcessErr as err:
-        app_logger.error(err)
-        process.run(["rm", "-rf", app_path])
-
+    if os.path.isdir(path):
+        if path.endswith("/"): 
+            path = path[:-1]
+        parts = path.split("/")
+        name = parts[len(parts) - 1]
+        if " " in name:
+            err = (f" Los nombres con espacios en blanco '{name}' " +
+                    "no estan permitidos")
+            app_logger.error(err)
+            return
+        app_logger.info(f" Añadiendo app con el nombre '{name}'...")
+        if name in get_appnames():
+            app_logger.error(f" La aplicacion {name} ya existe")
+            return
+        if "index.html" not in os.listdir(path):
+            if "ROOT" not in os.listdir(path):
+                err =  (f"El directorio '{path}' no contiene un " + 
+                         "archivo de arranque index.html ni una " +
+                         "carpeta raiz 'ROOT'")
+                app_logger.error(err)
+                return
+            elif "index.html" not in os.listdir(f"{path}/ROOT"):
+                err =  (f"La carpeta raiz '{path}' no contiene un " + 
+                         "archivo de arranque index.html")
+                app_logger.error(err)
+                return
+            else:
+                # Copiamos directamente la aplicacion
+                process.shell(f"cp -r {path} {apps_repo_path}/")
+        else:
+            app_path = f"{apps_repo_path}/{name}"
+            process.run(["mkdir", app_path])
+            process.run(["mkdir", f"{app_path}/ROOT"]) 
+            process.shell(f"cp -r {path}/* {app_path}/ROOT/")
+    elif os.path.isfile(path):
+        parts = path.split("/")
+        full_name = parts[len(parts) - 1]
+        name = full_name.split(".")[0]
+        if " " in name:
+            err = (f" Los nombres con espacios en blanco '{name}' " +
+                    "no estan permitidos")
+            app_logger.error(err)
+            return
+        app_logger.info(f" Añadiendo app con el nombre '{name}'...")
+        app_path = f"{apps_repo_path}/{name}"
+        if name in get_appnames():
+            app_logger.error(f" La aplicacion {name} ya existe")
+            return
+        process.run(["mkdir", app_path])
+        process.run(["mkdir", f"{app_path}/ROOT"]) 
+        process.shell(f"cp -r {path} {app_path}/ROOT/index.html")
+    app_logger.info(f" App '{name}' añadida con exito")
+        
 def use_app(app_name:str):
-    if app_name in get_appnames():
+    if app_name in get_appnames() or app_name == "default":
         msg = (f" Actualizando app '{app_name} en servidores...")
-        if app_name == "default":
-            def_name = get_defaultapp()
-            msg = (f" Actualizando app '{app_name}'({def_name}) " +
+        default = get_defaultapp()
+        if app_name == default or app_name == "default":
+            app_name = get_defaultapp()
+            msg = (f" Actualizando app default({app_name}) " +
                         "en servidores...")
-            app_name +=  f"/{def_name}"
-        app_logger.info(msg)
-        change_app(apps_repo_path+app_name+"/ROOT", app_name)
+            app_logger.info(msg)
+            root_path = f"'{apps_default_path}/{app_name}/ROOT'"
+            change_app(root_path, app_name)
+        else:
+            app_logger.info(msg)
+            change_app(f"'{apps_repo_path}/{app_name}/ROOT'", app_name)
     else:
         err = (f" La aplicacion '{app_name}' no existe en el " + 
                     "repositorio local de aplicaciones")
@@ -97,28 +125,36 @@ def use_app(app_name:str):
 
 def set_default(app_name:str):
     if app_name in get_appnames():
-        def_dir = apps_repo_path+"default"
-        old_default = os.listdir(def_dir)
+        if app_name == get_defaultapp():
+            msg = f" La app '{app_name}' ya se esta usando como default"
+            app_logger.error(msg)
+            return
+        old_default = os.listdir(apps_default_path)
         for d in old_default:
-            process.shell(f"cp -r {def_dir}/{d} {apps_repo_path}")
-            process.shell(f"rm -rf {def_dir}/{d}")
+            process.shell(
+                f"cp -r {apps_default_path}/{d} {apps_repo_path}/"
+            )
+            process.shell(
+                f"rm -rf {apps_default_path}/{d}"
+            )
         process.shell(
-            f"mv {apps_repo_path+app_name} {apps_repo_path}/default"
+            f"mv {apps_repo_path}/{app_name} {apps_default_path}/"
         )
         msg = f" '{app_name}' actualizada como default"
         app_logger.info(msg)
     else:
-        err = (f" La aplicacion '{app_name}' no existe en el " + 
+        err = (f" La app '{app_name}' no existe en el " + 
                     "repositorio local de aplicaciones")
         app_logger.error(err)
 
 def remove_app(app_name:str):
     if app_name in get_appnames():
-        if app_name == "default":
-            err = " No se puede eliminar la app por defecto"
+        if app_name == get_defaultapp():
+            err = (" No se puede eliminar la app que se esta " + 
+                    "usando como default")
             app_logger.error(err)
             return
-        process.shell(f"rm -rf {apps_repo_path+app_name}")
+        process.shell(f"rm -rf {apps_repo_path}/{app_name}")
         msg = f" Aplicacion '{app_name}' eliminada con exito"
         app_logger.info(msg)
     else:
@@ -128,9 +164,9 @@ def remove_app(app_name:str):
 
 def clear_repository():
     for app_name in get_appnames():
-        if app_name == "default":
+        if app_name == get_defaultapp():
             continue
-        process.shell(f"rm -rf {apps_repo_path+app_name}")
+        process.shell(f"rm -rf {apps_repo_path}/{app_name}")
         app_logger.info(f" App '{app_name}' eliminada")
         
 # --------------------------------------------------------------------
@@ -211,6 +247,11 @@ def change_app(app_path, name):
     for s in servs:
         if s.state != "RUNNING":
             app_logger.error(f" El servidor {s.name} no esta arrancado")
+            continue
+        if s.app == name:
+            err = (f" El servidor '{s.name}' ya esta usando la " + 
+                   f"aplicacion '{name}'")
+            app_logger.error(err)
             continue
         app_logger.info(f" Actualizando aplicacion de servidor '{s.name}'")
         try: 

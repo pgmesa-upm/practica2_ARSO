@@ -389,13 +389,20 @@ def app(options={}, flags={}):
         apps.use_app(options["use"][0])
         if "-m" in flags:
             apps.mark_htmlindexes()
-    elif "setdefault" in options:
-        apps.set_default(options["setdefault"][0])
+    elif "setdef" in options:
+        apps.set_default(options["setdef"][0])
     elif "list" in options:
         apps.list_apps()
-    elif "remove" in options:
-        apps.remove_app(options["remove"][0])
+    elif "rm" in options:
+        apps.remove_app(options["rm"][0])
     elif "emptyrep" in options:
+        msg = ("Se eliminaran todas las aplicaciones del " +
+               "repositorio local (Excepto la aplicacion " + 
+               "establecida como default)")
+        print(msg)
+        answer = str(input("Estas seguro(y/n): "))
+        if answer.lower() != "y":
+            return
         apps.clear_repository()
         
 # -------------------------------------------------------------------- 

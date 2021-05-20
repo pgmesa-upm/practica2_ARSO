@@ -18,8 +18,10 @@ from program import apps
 serv_logger = logging.getLogger(__name__)
 # Tag e id de registro para la imagen configurada
 TAG = "server"; IMG_ID = "s_image"
-# Puerto en que se van a ejecutar
+# Puerto en que se van a ejecutar (default de tomcat8)
 PORT = 8080
+# Donde se guardan las aplicaciones (default de tomcat8)
+tomcat_app_path = "/var/lib/tomcat8/webapps/"
 # --------------------------------------------------------------------
 def get_servers(num:int, *names, image:str=None) -> list:
     """Devuelve los objetos de los servidores que se vayan a crear 
@@ -67,7 +69,7 @@ def get_servers(num:int, *names, image:str=None) -> list:
         server.add_to_network("eth0", with_ip=ip)
         setattr(server, "port", PORT)
         setattr(server, "app", apps.get_defaultapp())
-        setattr(server, "marked", True)
+        setattr(server, "marked", False)
         servers.append(server)
     return servers
 
@@ -97,10 +99,11 @@ def _config_image() -> str:
         serv_logger.error(err_msg)
         return platform.default_image
     # Añadimos la aplicacion a los servidores 
-    path = "/var/lib/tomcat8/webapps/"
-    serv.execute(["rm", "-rf", path+"ROOT"])
+    serv.execute(["rm", "-rf", f"{tomcat_app_path}/ROOT"])
     default_app = apps.get_defaultapp()
-    serv.push(f"program/resources/default/{default_app}/ROOT", path)
+    if default_app is not None:
+        def_path = f"{apps.apps_default_path}/{default_app}/ROOT"
+        serv.push(def_path, f"{tomcat_app_path}/")
     # Vemos que no existe una imagen con el alias que vamos a usar
     alias = "tomcat8_serv"
     k = 1
