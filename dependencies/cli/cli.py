@@ -210,7 +210,6 @@ class Cli:
                 for opt in cmd.options.values():
                     info = f"=> '{opt.name}' --> {opt.description}"
                     print("          ", info)
-        if command is not None: return
         print(" + Flags: ")   
         for flag in self.flags.values():
             if not flag.description == None:

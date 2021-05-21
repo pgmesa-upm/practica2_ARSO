@@ -109,7 +109,7 @@ def add_app(path:str, name:str=None):
         
 def use_app(app_name:str, *servs):
     if app_name in get_appnames() or app_name == "default":
-        msg = (f" Actualizando app '{app_name} en servidores...")
+        msg = (f" Actualizando app '{app_name}' en servidores...")
         default = get_defaultapp()
         if app_name == default or app_name == "default":
             app_name = get_defaultapp()
@@ -118,7 +118,7 @@ def use_app(app_name:str, *servs):
                         "default")
                 app_logger.error(msg)
                 return
-            msg = (f" Actualizando app default({app_name}) " +
+            msg = (f" Actualizando app '{app_name}' " +
                         "en servidores...")
             app_logger.info(msg)
             root_path = f"{apps_default_path}/{app_name}/ROOT"
