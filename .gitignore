@@ -5,5 +5,7 @@ __pycache__
 50-cloud-init.yaml
 99-disable-network-config.cfg
 haproxy.cfg
-apps/*
-!apps/default
+
+# Que solo se guarde en github la aplicacion por defecto
+program/resources/apps/*
+!program/resources/apps/default

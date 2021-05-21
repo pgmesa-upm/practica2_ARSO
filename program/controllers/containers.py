@@ -1,10 +1,10 @@
 
-from dependencies.utils.tools import objectlist_as_dict
 import logging
 from os import remove
 from contextlib import suppress
 
 from dependencies.register import register
+from dependencies.utils.tools import objectlist_as_dict
 from dependencies.utils.decorators import catch_foreach
 from dependencies.lxc.lxc_classes.container import Container, LxcError
 from program.platform.machines import servers
@@ -134,7 +134,10 @@ def update_containers(*cs_to_update, remove:bool=False):
                 cs_dict.pop(c.name)
             else:
                 cs_dict[c.name] = c
-    register.update(ID, list(cs_dict.values()))
+    if len(cs_dict) == 0:
+        register.remove(ID)
+    else:
+        register.update(ID, list(cs_dict.values()))
    
 def _update_container(c_to_update:Container, remove:bool=False):
     """Actualiza el objeto de un contenedor en el registro

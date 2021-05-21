@@ -3,6 +3,7 @@ import logging
 
 from dependencies.register import register
 from dependencies.utils.decorators import catch_foreach
+from dependencies.utils.tools import objectlist_as_dict
 from dependencies.lxc.lxc_classes.bridge import Bridge, LxcNetworkError
 
 # --------------- CONTROLADOR DE BRIDGES (PUENTES) -------------------
@@ -49,13 +50,13 @@ def delete(b:Bridge=None):
                          "fuera del programa, se eliminara de la " +
                          "plataforma pero seguira existiendo")
             bgs_logger.warning(warn_msg)
-            _update_bridge(b, remove=True)
+            _update_bridges(b, remove=True)
             raise LxcNetworkError()
         else:
             raise LxcNetworkError(err_msg)
     else:
         bgs_logger.info(f" bridge '{b.name}' eliminado con exito")
-    _update_bridge(b, remove=True)
+    _update_bridges(b, remove=True)
 
 # -------------------------------------------------------------------
 def attach(cs_name:str, to_bridge:Bridge, with_eth:str):
@@ -74,10 +75,10 @@ def attach(cs_name:str, to_bridge:Bridge, with_eth:str):
         bgs_logger.info(f" '{cs_name}' agregado con exito")
     except LxcNetworkError as err:
         bgs_logger.error(err)
-    _update_bridge(bridge)
+    _update_bridges(bridge)
     
 # -------------------------------------------------------------------   
-def _update_bridge(b_to_update:Bridge, remove=False):
+def _update_bridges(*bs_to_update:Bridge, remove=False):
     """Actualiza el objeto de un bridge en el registro
 
     Args:
@@ -85,21 +86,18 @@ def _update_bridge(b_to_update:Bridge, remove=False):
         remove (bool, optional): Si es verdadero, se elimina el
             contenedor del registro. Por defecto es False
     """
-    bgs = register.load(register_id=ID)
-    index = None
-    for i, b in enumerate(bgs):
-        if b.name == b_to_update.name:
-            index = i
-            break
-    if index != None:
-        bgs.pop(index)
-        if remove:
-            if len(bgs) == 0:
-                register.remove(ID)
-                return
-        else:
-            bgs.append(b_to_update)
-        register.update(ID, bgs)
+    bgs = register.load(ID)
+    bgs_dict = objectlist_as_dict(bgs, key_attribute="name")
+    for b in bs_to_update:
+        if b.name in bgs_dict:
+            if remove:
+                bgs_dict.pop(b.name)
+            else:
+                bgs_dict[b.name] = b
+    if len(bgs_dict) == 0:
+        register.remove(ID)
+    else:
+        register.update(ID, list(bgs_dict.values()))
 
 def _add_bridge(b_to_add:Bridge):
     """Añade un bridge al registro
@@ -107,8 +105,8 @@ def _add_bridge(b_to_add:Bridge):
     Args:
         b_to_add (Bridge): Bridge a añadir
     """
-    cs = register.load(register_id=ID)
-    if cs == None:
+    bgs = register.load(register_id=ID)
+    if bgs == None:
         register.add(ID, [b_to_add])
     else:
         register.update(ID, b_to_add, override=False)

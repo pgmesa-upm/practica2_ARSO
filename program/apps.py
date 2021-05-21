@@ -1,8 +1,6 @@
 
 import os
 import logging
-from contextlib import suppress
-from os import defpath, path
 
 from program.controllers import containers
 from dependencies.register import register
@@ -215,7 +213,7 @@ def mark_htmlindexes(undo=False):
     if undo:
         word1 = "Desmarcando"
     app_logger.info(f" {word1} servidores...")
-    index_dir = "/var/lib/tomcat8/webapps/ROOT/"
+    index_dir = f"{servers.tomcat_app_path}/ROOT/"
     index_path = index_dir+"index.html"
     for s in servs:
         if s.state != "RUNNING":
@@ -238,11 +236,24 @@ def mark_htmlindexes(undo=False):
             return
         with open(pulled_file, "r") as file:
             index = file.read()
-        old = "<html>"
-        new = f"<html><h1> Servidor {s.name} </h1>"
-        if undo:
-            old = new
-            new = "<html>"
+        # Vemos donde hay que introducir/quitar la marca
+        mark = f"\n<h1> Servidor {s.name} </h1>" 
+        if not undo:
+            simbol = "<html"
+            chars = list(index)
+            start = index.find(simbol)
+            html_label = ""
+            for i in range(start,len(chars)):
+                char = chars[i]
+                html_label += char
+                if char == ">":
+                    break
+            old = html_label
+            new = html_label + mark
+        else:
+            old = mark
+            new = ""
+        # Marcamos o desmarcamos el index.html
         configured_index = index.replace(old, new)
         with open(pulled_file, "w") as f:
             f.write(configured_index)

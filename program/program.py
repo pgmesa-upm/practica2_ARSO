@@ -1,14 +1,11 @@
 
 from time import sleep
-import program
 from program.platform.machines import load_balancer, servers
 from dependencies.utils.tools import pretty
 from contextlib import suppress
-import re
 import logging
 import platform as plt
 import subprocess
-from functools import reduce
 
 from dependencies.lxc import lxc
 from program.controllers import containers, bridges
