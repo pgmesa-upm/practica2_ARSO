@@ -17,11 +17,15 @@ apps_repo_path = "program/resources/apps"
 apps_default_path = f"{apps_repo_path}/default"
 # --------------------------------------------------------------------
 def get_appnames() -> list:
-    apps = os.listdir(apps_repo_path)
-    for i, app in enumerate(apps): 
-        if app == "default":
-            apps[i] = get_defaultapp()
-            break
+    dirs = os.listdir(apps_repo_path)
+    apps = []
+    for d in dirs: 
+        if d == "default":
+            default = get_defaultapp()
+            if default is not None:
+                apps.append(default)
+            continue
+        apps.append(d)
     return apps
 
 def get_defaultapp() -> str:
@@ -36,14 +40,17 @@ def list_apps():
     default = get_defaultapp()
     apps = get_appnames()
     ordered_apps = []
-    for i, app in enumerate(apps):
-        if app == default:
-            ordered_apps.append(f"default({app})")
-            apps.pop(i)
-            break
+    if len(apps) == 0:
+        ordered_apps.append(f"default({default})")
+    else:
+        for i, app in enumerate(apps):
+            if app == default:
+                ordered_apps.append(f"default({app})")
+                apps.pop(i)
+                break
     ordered_apps += apps
     print(" + Apps Repository:" )
-    print("     --> ",concat_array(ordered_apps,separator=" -- "))
+    print("     --> ", concat_array(ordered_apps,separator=" -- "))
     
 # --------------------------------------------------------------------   
 def add_app(path:str, name:str=None):
@@ -104,20 +111,35 @@ def add_app(path:str, name:str=None):
         process.shell(f"cp -r {path} {app_path}/ROOT/index.html")
     app_logger.info(f" App '{name}' añadida con exito")
         
-def use_app(app_name:str):
+def use_app(app_name:str, *servs):
     if app_name in get_appnames() or app_name == "default":
         msg = (f" Actualizando app '{app_name} en servidores...")
         default = get_defaultapp()
         if app_name == default or app_name == "default":
             app_name = get_defaultapp()
+            if app_name is None:
+                msg = (f" No existe una aplicacion definida como " +
+                        "default")
+                app_logger.error(msg)
+                return
             msg = (f" Actualizando app default({app_name}) " +
                         "en servidores...")
             app_logger.info(msg)
-            root_path = f"'{apps_default_path}/{app_name}/ROOT'"
-            change_app(root_path, app_name)
+            root_path = f"{apps_default_path}/{app_name}/ROOT"
         else:
             app_logger.info(msg)
-            change_app(f"'{apps_repo_path}/{app_name}/ROOT'", app_name)
+            root_path = f"{apps_repo_path}/{app_name}/ROOT"
+        if len(servs) == 0:
+            cs = register.load(containers.ID)
+            if cs is None:
+                app_logger.error(" No hay contenedores creados")
+                return
+            servs = list(filter(lambda c: c.tag == servers.TAG, cs))
+            if len(servs) == 0:
+                app_logger.error(" No hay servidores en funcionamiento")
+                return
+        for s in servs:
+            servers.change_app(s, root_path, app_name)
     else:
         err = (f" La aplicacion '{app_name}' no existe en el " + 
                     "repositorio local de aplicaciones")
@@ -148,13 +170,12 @@ def set_default(app_name:str):
         app_logger.error(err)
 
 def remove_app(app_name:str):
+    base_path = apps_repo_path
+    if app_name == "default" or app_name == get_defaultapp(): 
+        app_name = get_defaultapp()
+        base_path = apps_default_path
     if app_name in get_appnames():
-        if app_name == get_defaultapp():
-            err = (" No se puede eliminar la app que se esta " + 
-                    "usando como default")
-            app_logger.error(err)
-            return
-        process.shell(f"rm -rf {apps_repo_path}/{app_name}")
+        process.shell(f"rm -rf {base_path}/{app_name}")
         msg = f" Aplicacion '{app_name}' eliminada con exito"
         app_logger.info(msg)
     else:
@@ -162,11 +183,19 @@ def remove_app(app_name:str):
                     "repositorio local de aplicaciones")
         app_logger.error(err)
 
-def clear_repository():
-    for app_name in get_appnames():
-        if app_name == get_defaultapp():
+def clear_repository(skip:list=[]):
+    apps = get_appnames()
+    if len(apps) == 0:
+        app_logger.error(" El repositorio de aplicaciones esta vacio")
+        return
+    for app_name in apps:
+        if app_name in skip:
             continue
-        process.shell(f"rm -rf {apps_repo_path}/{app_name}")
+        base_path = apps_repo_path
+        if app_name == "default" or app_name == get_defaultapp(): 
+            app_name = get_defaultapp()
+            base_path = apps_default_path
+        process.shell(f"rm -rf {base_path}/{app_name}")
         app_logger.info(f" App '{app_name}' eliminada")
         
 # --------------------------------------------------------------------
@@ -232,44 +261,4 @@ def mark_htmlindexes(undo=False):
         app_logger.info(f" Servidor '{s.name}' {word2}")
         os.remove("index.html")
     register.update(containers.ID, cs)
-
-def change_app(app_path, name):
-    cs = register.load(containers.ID)
-    if cs is None:
-        app_logger.error(" No hay contenedores creados")
-        return
-    servs = list(filter(lambda c: c.tag == servers.TAG,cs))
-    if len(servs) == 0:
-        app_logger.error(" No hay servidores en funcionamiento")
-        return
-    webapps_dir = "/var/lib/tomcat8/webapps/"
-    root_dir = "/var/lib/tomcat8/webapps/ROOT"
-    for s in servs:
-        if s.state != "RUNNING":
-            app_logger.error(f" El servidor {s.name} no esta arrancado")
-            continue
-        if s.app == name:
-            err = (f" El servidor '{s.name}' ya esta usando la " + 
-                   f"aplicacion '{name}'")
-            app_logger.error(err)
-            continue
-        app_logger.info(f" Actualizando aplicacion de servidor '{s.name}'")
-        try: 
-            # Eliminamos la aplicacion anterior
-            s.execute(["rm", "-rf", root_dir])
-        except lxc.LxcError as err:
-            err_msg = (f" Error al eliminar la aplicacion anterior: {err}")
-            app_logger.error(err_msg)
-            return
-        try:
-            s.push(app_path, webapps_dir)
-        except lxc.LxcError as err:
-            err_msg = (f" Error al añadir la aplicacion: {err}")
-            app_logger.error(err_msg)
-            return
-        msg = (f" Actualizacion de aplicacion de servidor '{s.name}' " + 
-                    "realizada con exito")
-        s.app = name
-        s.marked = False
-        register.update(containers.ID, cs)
-        app_logger.info(msg)
+# --------------------------------------------------------------------

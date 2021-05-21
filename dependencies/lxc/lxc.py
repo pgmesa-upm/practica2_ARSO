@@ -77,23 +77,14 @@ def _lxc_generic_list(cmd:list, print_:bool=False,
     table = run(cmd)
     return process_lxctable(table)
 
-def lxc_list(print_:bool=False, print_format:str="table",
-                        ips_to_wait:int=0, time_out:int=10) -> dict:
+
+def lxc_list(print_:bool=False, print_format:str="table") -> dict:
     """Se encarga de mostrar la lista de contenedores de lxc, pero 
     en caso de estar arrancados, como la ip tarda un rato en
     aparecer, la funcion espera a que se haya cargado toda la
     informacion para mostrar la lista. Comprueba que todas las ips
     hayan aparecido"""
     cmd = ["lxc", "list"]
-    if ips_to_wait > 0:
-        out, t, twait= "", 0, 0.1
-        while not out.count(".") == 3*ips_to_wait:
-            sleep(twait); t += twait
-            if t >= time_out:
-                err = (" timeout de 'lxc list', no se pudieron " + 
-                        "cargar todas las ips")
-                raise LxcError(err)
-            out = run(cmd) 
     dic = _lxc_generic_list(
         cmd,
         print_=print_, 

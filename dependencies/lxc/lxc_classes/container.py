@@ -27,6 +27,7 @@ class Container:
         self.name = str(name)
         self.container_image = container_image
         self.state = NOT_INIT
+        self.started_up = False
         self.tag = tag
         self.networks = {}
         self.connected_networks = {}
@@ -88,28 +89,22 @@ class Container:
             "xterm","-fa", "monaco", "-fs", "13", "-bg", "black",
             "-fg", "green", "-e", f"lxc exec {self.name} bash"
         ])
-   
-    def init(self):
-        """Crea el contenedor
-
-        Raises:
-            LxcError: Si el contenedor ya se ha iniciado
-        """
-        if self.state != NOT_INIT:
-            err = (f" {self.tag} '{self.name}' esta '{self.state}' " +
-                                "y no puede ser inicializado de nuevo")
-            raise LxcError(err)
-        lxc.run(["lxc", "init", self.container_image, self.name])  
-        self.state = STOPPED
-        # Se limitan los recursos del contenedor 
-        limits = {
-            "cpu": ["limits.cpu.allowance", "40ms/200ms"], 
-            "memory": ["limits.memory", "1024MB"],
-            "cores": ["limits.cpu", "2"]
-        }
-        for l in limits: 
-            with suppress(LxcError):
-                lxc.run(["lxc", "config", "set", self.name] + limits[l])
+                
+    def refresh(self):
+        if self.state != RUNNING: 
+            self.started_up = False
+            return
+        cmd = ["lxc", "exec", self.name, "--"]
+        ask_if_running = ["systemctl", "is-system-running"]
+        try:
+            out = lxc.run(cmd + ask_if_running, stderr=False)
+        except LxcError as err:
+            out = str(err)
+        state = out.strip()
+        if state == "running" or state == "degraded":
+            self.started_up = True
+            return
+        self.started_up = False
                 
     def wait_for_startup(self):
         """Espera a que el contenedor haya terminado de arrancarse
@@ -122,15 +117,8 @@ class Container:
         if self.state != RUNNING: 
             err = (f"El contenedor '{self.name}' no se ha arrancado")
             raise LxcError(err)
-        state = "initializing"
-        while not (state == "running" or state == "degraded"):
-            cmd = ["lxc", "exec", self.name, "--"]
-            ask_if_running = ["systemctl", "is-system-running"]
-            try:
-                out = lxc.run(cmd + ask_if_running, stderr=False)
-            except LxcError as err:
-                out = str(err)
-            state = out.strip()
+        while not self.started_up:
+            self.refresh()
     
     def update_apt(self):
         self.execute(["apt","update"])
@@ -168,6 +156,28 @@ class Container:
         #"-r" se añade para que se haga de forma recursiva por si 
         # se pasa una carpeta en vez de un fichero
         lxc.run(["lxc", "file", "pull", "-r",  c_path, in_path])
+    
+    def init(self):
+        """Crea el contenedor
+
+        Raises:
+            LxcError: Si el contenedor ya se ha iniciado
+        """
+        if self.state != NOT_INIT:
+            err = (f" {self.tag} '{self.name}' esta '{self.state}' " +
+                                "y no puede ser inicializado de nuevo")
+            raise LxcError(err)
+        lxc.run(["lxc", "init", self.container_image, self.name])  
+        self.state = STOPPED
+        # Se limitan los recursos del contenedor 
+        limits = {
+            "cpu": ["limits.cpu.allowance", "40ms/200ms"], 
+            "memory": ["limits.memory", "1024MB"],
+            "cores": ["limits.cpu", "2"]
+        }
+        for l in limits: 
+            with suppress(LxcError):
+                lxc.run(["lxc", "config", "set", self.name] + limits[l])
         
     def start(self):
         """Arranca el contenedor
@@ -202,6 +212,7 @@ class Container:
             raise LxcError()
         lxc.run(["lxc", "stop", self.name, "--force"])  
         self.state = STOPPED
+        self.started_up = False
         
     def delete(self):
         """Elimina el contenedor
@@ -215,6 +226,7 @@ class Container:
             raise LxcError(err)
         lxc.run(["lxc", "delete", self.name])  
         self.state = DELETED
+        self.started_up = False
     
     def pause(self):
         """Pausa el contenedor
@@ -232,6 +244,7 @@ class Container:
             raise LxcError(err)
         lxc.run(["lxc", "pause", self.name])  
         self.state = FROZEN
+        self.started_up = False
     
     def __str__(self):
         """Define como se va a representar el contenedor en forma

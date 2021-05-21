@@ -1,4 +1,5 @@
 
+from dependencies.utils.tools import objectlist_as_dict
 import logging
 from os import remove
 from contextlib import suppress
@@ -123,7 +124,18 @@ def configure_netfile(c:Container):
     remove(file1)
     remove(file2)
     
-# --------------------------------------------------------------------    
+# -------------------------------------------------------------------- 
+def update_containers(*cs_to_update, remove:bool=False):
+    cs = register.load(ID)
+    cs_dict = objectlist_as_dict(cs, key_attribute="name")
+    for c in cs_to_update:
+        if c.name in cs_dict:
+            if remove:
+                cs_dict.pop(c.name)
+            else:
+                cs_dict[c.name] = c
+    register.update(ID, list(cs_dict.values()))
+   
 def _update_container(c_to_update:Container, remove:bool=False):
     """Actualiza el objeto de un contenedor en el registro
 
@@ -148,21 +160,7 @@ def _update_container(c_to_update:Container, remove:bool=False):
             register.update(
                 "updates", True, override=False, dict_id="s_state"
             )
-    cs = register.load(ID)
-    index = None
-    for i, c in enumerate(cs):
-        if c.name == c_to_update.name:
-            index = i
-            break
-    if index != None:
-        cs.pop(index)
-        if remove:
-            if len(cs) == 0:
-                register.remove(ID)
-                return
-        else:
-            cs.append(c_to_update)
-        register.update(ID, cs)
+    update_containers(c_to_update, remove=remove)
 
 def _add_container(c_to_add:Container):
     """Añade un contenedor al registro

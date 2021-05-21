@@ -50,8 +50,23 @@ def start(*target_cs, options={}, flags=[]):
         c_names = list(map(lambda c: c.name, target_cs))
         term(*c_names, flags=flags)
     warn = (" Los servicios de los servidores y/o balanceador puede " +
-            "tardar unos cuantos segundos en estar disponibles")
+            "tardar unos cuantos segundos en estar disponibles\n")
     cmd_logger.warning(warn)
+    # Cargamos la aplicacion
+    if apps.get_defaultapp() is not None:
+        servs = []
+        for c in succesful_cs:
+            if c.tag == servers.TAG and c.app != apps.get_defaultapp():
+                servs.append(c)
+        if len(servs) > 0:
+            msg = " Cargando la aplicacion por defecto en servidores..."
+            cmd_logger.info(msg) 
+            apps.use_app("default", *servs)
+            cmd_logger.info(" Distribucion de la aplicacion finalizado\n")
+    else:
+        warn = (" No hay ninguna aplicacion asignada como default " +
+                "para introducir en los servidores\n")
+        cmd_logger.warning(warn)
     if "-m" in flags:
         app(options={"markservs":[]})
         
@@ -394,16 +409,26 @@ def app(options={}, flags={}):
     elif "list" in options:
         apps.list_apps()
     elif "rm" in options:
-        apps.remove_app(options["rm"][0])
+        app_name = options["rm"][0]
+        if not "-f" in flags:
+            if app_name == apps.get_defaultapp():
+                print(f"La app '{app_name}' esta establecida como " + 
+                    "default")
+                question = "¿Eliminar la app de todas formas?(y/n): "
+                answer = str(input(question))
+                if answer.lower() != "y": return
+        apps.remove_app(app_name)
     elif "emptyrep" in options:
-        msg = ("Se eliminaran todas las aplicaciones del " +
-               "repositorio local (Excepto la aplicacion " + 
-               "establecida como default)")
-        print(msg)
-        answer = str(input("Estas seguro(y/n): "))
-        if answer.lower() != "y":
-            return
-        apps.clear_repository()
+        skip = []
+        if not "-f" in flags:
+            msg = ("Se eliminaran todas las aplicaciones del " +
+                "repositorio local")
+            print(msg)
+            answer = str(input("¿Estas seguro?(y/n): "))
+            if answer.lower() != "y": return
+            answer = str(input("¿Eliminar tambien default?(y/n): "))
+            if answer.lower() != "y": skip = [apps.get_defaultapp()]
+        apps.clear_repository(skip=skip)
         
 # -------------------------------------------------------------------- 
 def show(options={}, flags={}):

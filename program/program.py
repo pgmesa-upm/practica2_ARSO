@@ -1,4 +1,6 @@
 
+from time import sleep
+import program
 from program.platform.machines import load_balancer, servers
 from dependencies.utils.tools import pretty
 from contextlib import suppress
@@ -66,18 +68,34 @@ def show_dependencies():
 
 # --------------------------------------------------------------------
 def list_lxc_containers():
-    ips = 0
     cs = register.load(containers.ID)
     if cs is not None:
         program_logger.info(" Cargando resultados...")
         running = list(filter(lambda c: c.state == "RUNNING", cs))
         frozen = list(filter(lambda c: c.state == "FROZEN", cs))
         total = running+frozen
-        ips = reduce(lambda acum, c: acum+len(c.networks), total, 0)
-    try:
-        lxc.lxc_list(ips_to_wait=ips, print_=True)
-    except Exception as err:
-        program_logger.error(err)
+        finished = False; timeout = False
+        tf = 10; t = 0; twait = 0.1
+        while not finished:
+            if timeout:
+                err = (" timeout de 'lxc list', no se pudieron " + 
+                        "cargar todas las ips")
+                program_logger.error(err)
+                return
+            cs_list = lxc.lxc_list()
+            for c in total:
+                for net in c.networks:
+                    if net not in cs_list[c.name]["IPV4"]:
+                        break
+                else:
+                    continue
+                break
+            else:
+                finished = True
+            sleep(twait); t += twait
+            if t >= tf:
+                timeout = True
+        lxc.lxc_list(print_=True)
 
 def list_lxc_bridges():
     lxc.lxc_network_list(print_=True)
@@ -181,6 +199,7 @@ def _check_containers():
     cs_info = lxc.lxc_list()
     cs_updated = []
     for c in cs_object:
+        c.refresh()
         if c.name not in cs_info:
             warn = (f" El contenedor '{c.name}' se ha eliminado fuera " +
                     "del programa (informacion actualizada)")

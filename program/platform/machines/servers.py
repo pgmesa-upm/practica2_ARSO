@@ -21,7 +21,7 @@ TAG = "server"; IMG_ID = "s_image"
 # Puerto en que se van a ejecutar (default de tomcat8)
 PORT = 8080
 # Donde se guardan las aplicaciones (default de tomcat8)
-tomcat_app_path = "/var/lib/tomcat8/webapps/"
+tomcat_app_path = "/var/lib/tomcat8/webapps"
 # --------------------------------------------------------------------
 def get_servers(num:int, *names, image:str=None) -> list:
     """Devuelve los objetos de los servidores que se vayan a crear 
@@ -68,7 +68,7 @@ def get_servers(num:int, *names, image:str=None) -> list:
         ips.append(ip)
         server.add_to_network("eth0", with_ip=ip)
         setattr(server, "port", PORT)
-        setattr(server, "app", apps.get_defaultapp())
+        setattr(server, "app", None)
         setattr(server, "marked", False)
         servers.append(server)
     return servers
@@ -98,12 +98,6 @@ def _config_image() -> str:
                             "error de lxc: " + str(err))
         serv_logger.error(err_msg)
         return platform.default_image
-    # Añadimos la aplicacion a los servidores 
-    serv.execute(["rm", "-rf", f"{tomcat_app_path}/ROOT"])
-    default_app = apps.get_defaultapp()
-    if default_app is not None:
-        def_path = f"{apps.apps_default_path}/{default_app}/ROOT"
-        serv.push(def_path, f"{tomcat_app_path}/")
     # Vemos que no existe una imagen con el alias que vamos a usar
     alias = "tomcat8_serv"
     k = 1
@@ -130,6 +124,41 @@ def _config_image() -> str:
     image_info = {"alias": alias, "fingerprint": fingerprint}
     register.add(IMG_ID, image_info)
     return alias
+
+# --------------------------------------------------------------------
+def change_app(server:Container, app_path:str, name:str):
+    webapps_dir = f"{tomcat_app_path}/"
+    root_dir = f"{tomcat_app_path}/ROOT"
+    if server.state != "RUNNING":
+        err = f" El servidor {server.name} no esta arrancado"
+        serv_logger.error(err)
+        return
+    if server.app == name:
+        err = (f" El servidor '{server.name}' ya esta usando la " + 
+                f"aplicacion '{name}'")
+        serv_logger.error(err)
+        return
+    msg = f" Actualizando aplicacion de servidor '{server.name}'"
+    serv_logger.info(msg)
+    try: 
+        # Eliminamos la aplicacion anterior
+        server.execute(["rm", "-rf", root_dir])
+    except lxc.LxcError as err:
+        err_msg = (f" Error al eliminar la aplicacion anterior: {err}")
+        serv_logger.error(err_msg)
+        return
+    try:
+        server.push(app_path, webapps_dir)
+    except lxc.LxcError as err:
+        err_msg = (f" Error al añadir la aplicacion: {err}")
+        serv_logger.error(err_msg)
+        return
+    msg = (f" Actualizacion de aplicacion de servidor '{server.name}' " + 
+                "realizada con exito")
+    server.app = name
+    server.marked = False
+    containers.update_containers(server)
+    serv_logger.info(msg)
         
 # --------------------------------------------------------------------
 def _process_names(num:int, *names) -> list:
