@@ -38,17 +38,15 @@ def list_apps():
     default = get_defaultapp()
     apps = get_appnames()
     ordered_apps = []
-    if len(apps) == 0:
-        ordered_apps.append(f"default({default})")
-    else:
-        for i, app in enumerate(apps):
-            if app == default:
-                ordered_apps.append(f"default({app})")
-                apps.pop(i)
-                break
+    ordered_apps.append(f"default({default})")
+    if default in apps:
+        apps.remove(default)
     ordered_apps += apps
     print(" + Apps Repository:" )
-    print("     --> ", concat_array(ordered_apps,separator=" -- "))
+    msg = concat_array(ordered_apps,separator=" -- ")
+    if default is None and len(apps) == 0:
+        msg = "El repositorio de aplicaciones esta vacio"
+    print("     --> ", msg)
     
 # --------------------------------------------------------------------   
 def add_app(path:str, name:str=None):
@@ -166,7 +164,24 @@ def set_default(app_name:str):
         err = (f" La app '{app_name}' no existe en el " + 
                     "repositorio local de aplicaciones")
         app_logger.error(err)
-
+        
+def unset_default():
+    if get_defaultapp() is None:
+        app_logger.error(f" Default ya esta vacio")
+        return
+    old_default = os.listdir(apps_default_path)
+    for d in old_default:
+        process.shell(
+            f"cp -r {apps_default_path}/{d} {apps_repo_path}/"
+        )
+        process.shell(
+            f"rm -rf {apps_default_path}/{d}"
+        )
+        msg = f" La app '{d}' ha dejado de ser la app por defecto"
+        app_logger.info(msg)
+    msg = f" Ya no hay una aplicacion establecida por defecto"
+    app_logger.info(msg)
+        
 def remove_app(app_name:str):
     base_path = apps_repo_path
     if app_name == "default" or app_name == get_defaultapp(): 
@@ -197,10 +212,7 @@ def clear_repository(skip:list=[]):
         app_logger.info(f" App '{app_name}' eliminada")
         
 # --------------------------------------------------------------------
-def mark_htmlindexes(undo=False):
-    # Para modificar el index.html de la aplicacion de cada servidor
-    # y ver quien es quien. Replace elimina el index.html que haya
-    # en el contenedor
+def mark_apps(undo=False):
     cs = register.load(containers.ID)
     if cs is None:
         app_logger.error(" No hay contenedores creados")
@@ -209,67 +221,5 @@ def mark_htmlindexes(undo=False):
     if len(servs) == 0:
         app_logger.error(" No hay servidores en funcionamiento")
         return
-    word1 = "Marcando"
-    if undo:
-        word1 = "Desmarcando"
-    app_logger.info(f" {word1} servidores...")
-    index_dir = f"{servers.tomcat_app_path}/ROOT/"
-    index_path = index_dir+"index.html"
-    for s in servs:
-        if s.state != "RUNNING":
-            app_logger.error(f" El servidor {s.name} no esta arrancado")
-            continue
-        if s.marked and not undo: 
-            app_logger.error(f" El servidor {s.name} ya esta marcado")
-            continue
-        if not s.marked and undo:
-            app_logger.error(f" El servidor {s.name} no esta marcado")
-            continue
-        app_logger.info(f" {word1} servidor '{s.name}'")
-        pulled_file = "index.html"
-        try:  
-            s.pull(index_path, pulled_file)
-        except lxc.LxcError as err:
-            err_msg = (f" Error al descargar el index.html " + 
-                                f"del contenedor '{s.name}':" + str(err))
-            app_logger.error(err_msg)
-            return
-        with open(pulled_file, "r") as file:
-            index = file.read()
-        # Vemos donde hay que introducir/quitar la marca
-        mark = f"\n<h1> Servidor {s.name} </h1>" 
-        if not undo:
-            simbol = "<html"
-            chars = list(index)
-            start = index.find(simbol)
-            html_label = ""
-            for i in range(start,len(chars)):
-                char = chars[i]
-                html_label += char
-                if char == ">":
-                    break
-            old = html_label
-            new = html_label + mark
-        else:
-            old = mark
-            new = ""
-        # Marcamos o desmarcamos el index.html
-        configured_index = index.replace(old, new)
-        with open(pulled_file, "w") as f:
-            f.write(configured_index)
-        try:  
-            s.push(pulled_file, index_dir)
-        except lxc.LxcError as err:
-            err_msg = (f" Error al enviar el index.html marcado" + 
-                                f"al contenedor '{s.name}':" + str(err))
-            app_logger.error(err_msg)
-            return
-        if undo:
-            s.marked = False
-        else:
-            s.marked = True
-        word2 = word1.lower().replace("n", "")
-        app_logger.info(f" Servidor '{s.name}' {word2}")
-        os.remove("index.html")
-    register.update(containers.ID, cs)
+    servers.mark_htmlindexes(*servs, undo=undo)
 # --------------------------------------------------------------------

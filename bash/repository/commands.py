@@ -395,17 +395,19 @@ def change(options={}, flags={}):
 # --------------------------------------------------------------------       
 def app(options={}, flags={}):
     if "markservs" in options:
-        apps.mark_htmlindexes()
+        apps.mark_apps()
     elif "unmarkservs" in options:
-        apps.mark_htmlindexes(undo=True)
+        apps.mark_apps(undo=True)
     elif "add" in options:
         apps.add_app(options["add"][0])
     elif "use" in options:
         apps.use_app(options["use"][0])
         if "-m" in flags:
-            apps.mark_htmlindexes()
+            apps.mark_apps()
     elif "setdef" in options:
         apps.set_default(options["setdef"][0])
+    elif "unsetdef" in options:
+        apps.unset_default()
     elif "list" in options:
         apps.list_apps()
     elif "rm" in options:

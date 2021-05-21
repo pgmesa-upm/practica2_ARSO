@@ -80,23 +80,23 @@ def print_state():
     bgs = register.load(register_id=bridges.ID)
     if not is_deployed():
         print("--> La plataforma esta vacia, no ha sido desplegada")
-    print("CONTENEDORES")
+    print(" + CONTENEDORES")
     if cs != None:
         for c in cs:
             print(pretty(c))
     else:
-        print("No hay contenedores creados en la plataforma")
-    print("BRIDGES")
+        print("     No hay contenedores creados en la plataforma")
+    print(" + BRIDGES")
     if bgs != None:       
         for b in bgs:
             print(pretty(b))
     else:
-        print("No hay bridges creados en la plataforma")
+        print("     No hay bridges creados en la plataforma")
 
 def print_info():
     print("""
-    Al desplegarse la plataforma se crean 2 puentes virtuales (lxdr0 y
-    lxdbr1), una base de datos MongoDB y un balanceador haproxy para 
+    Al desplegarse la plataforma se crean 2 puentes virtuales (lxdbr0
+    y lxdbr1), una base de datos MongoDB y un balanceador haproxy para 
     distribuir la carga del tráfico entre los servidores. Tambien se
     crean el numero de servidores tomcat8 especificados y un cliente 
     lynx en caso de que se indique. A la subnet del lxdbr0 se conectan 
@@ -105,11 +105,13 @@ def print_info():
     para mas informacion sobre la infraestructura). El balanceador se 
     encarga de manejar a que servidor se va a conectar el cliente sin 
     que este sepa su direccion ip (transparecia, el cliente no sabe a 
-    cual se esta conectando).
-    Por defecto el programa configura una imagen con tomcat8 para los 
+    cual se esta conectando) (El comando 'app markservs' permite
+    distinguirlos)
+    
+    Por defecto, el programa configura una imagen con tomcat8 para los 
     servidores, una imagen haproxy (con dos tarjetas de red) para el 
     balanceador, una base de datos MongoDB y un cliente lynx (si se
-    indica)(comando 'app markservs' permite distinguirlos)
+    indica)
     ¡IMPORTANTE!
     Si se quisiera especificar una imagen distinta para alguno de los
     componenetes deben cumplir los siguientes requisitos para el 
@@ -120,7 +122,7 @@ def print_info():
     --> Imagen de Base de Datos: Se puede instalar cualquier base de
             datos, mientras que la aplicacion web que se utilice en
             los servidores (carpeta ROOT) sepa como interactuar con 
-            ella (db_ip=10.0.0.20). 
+            ella (db_ip_default=10.0.0.20). 
     --> Imagen de cliente: Se puede utilizar cualquier imagen ya que 
             este no tiene un impacto en el funcionamiento del programa
             (solo sirve para simular una conexion a los servidores)

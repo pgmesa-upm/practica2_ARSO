@@ -157,6 +157,8 @@ def config_cli() -> Cli:
        app.add_option("use", description=msg, extra_arg=True, mandatory=True)
        msg = ("<app_name> changes the default app of the servers")
        app.add_option("setdef", description=msg, extra_arg=True, mandatory=True)
+       msg = ("Makes the default app to be none")
+       app.add_option("unsetdef", description=msg)
        msg = ("<app_name> removes an app from the local repository")
        app.add_option("rm", description=msg, extra_arg=True, mandatory=True)
        msg = ("lists the apps of repository")
