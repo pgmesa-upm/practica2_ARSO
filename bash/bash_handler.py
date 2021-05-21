@@ -179,7 +179,7 @@ def config_cli() -> Cli:
        show.add_option("dep", description=msg)
        msg = ("shows important information about how the platform is built and " + 
               "deployed,\n                      and the requirements that the " + 
-              "container images need to fulfill in order to" + 
+              "container images need to fulfill, in order to" + 
               "\n                      fit into the platform (in case an specific " + 
               "image is passed to the program)")
        show.add_option("info", description=msg)

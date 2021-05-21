@@ -106,15 +106,20 @@ def print_info():
     encarga de manejar a que servidor se va a conectar el cliente sin 
     que este sepa su direccion ip (transparecia, el cliente no sabe a 
     cual se esta conectando) (El comando 'app markservs' permite
-    distinguirlos)
+    distinguirlos).
     
     Por defecto, el programa configura una imagen con tomcat8 para los 
     servidores, una imagen haproxy (con dos tarjetas de red) para el 
     balanceador, una base de datos MongoDB y un cliente lynx (si se
-    indica)
-    ¡IMPORTANTE!
+    indica). La plataforma solo admite un cliente contenedor y 5
+    servidores. Un servidor tomcat admite 200 peticiones simultaneas 
+    de clientes por defecto, por lo que la plataforma soportara 1000 
+    peticiones/conexiones simultaneas a los recursos (aplicaciones) 
+    disponibles que se hayan distribuido en los servidores.
+    
+     + ¡IMPORTANTE!
     Si se quisiera especificar una imagen distinta para alguno de los
-    componenetes deben cumplir los siguientes requisitos para el 
+    componenetes, deben cumplir los siguientes requisitos para el 
     correcto funcionamiento del programa
     --> Imagen de Servidores: Debe tener tomcat8 instalado
     --> Imagen de Balanceador: Debe tener haproxy instalado y dos 
