@@ -85,11 +85,16 @@ def print_state():
         pairs = [
             ("name", "tag"), 
             ("state", "started_up"), 
-            ("networks", "connected_networks")
+            ("networks", "connected_networks"),
         ]
-        attrs_order = ["container_image", "port", "app", "state", "networks", "port"]
+        attrs_order = ["name", "state", "networks", "container_image", "marked"]
         for c in cs:
-            print(pretty(c, *pairs, firstcolum_order=attrs_order))
+            extra_pairs = []
+            if c.tag == servers.TAG:
+                extra_pairs = [("container_image", "app")]
+            elif c.tag == load_balancer.TAG:
+                extra_pairs = [("container_image", "algorithm")]
+            print(pretty(c, *(pairs+extra_pairs), firstcolum_order=attrs_order))
     else:
         print("     No hay contenedores creados en la plataforma")
     print(" + BRIDGES")

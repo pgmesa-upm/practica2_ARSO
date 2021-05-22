@@ -34,6 +34,23 @@ def pretty(obj:object, *attr_colums, firstcolum_order:list=None) -> str:
     """
     attr_dict = vars(obj)
     attr_colums = list(attr_colums)
+    # Comprobamos que las tuplas que nos han pasado son correctas
+    valid_colums = []
+    all_checked_attrs = []
+    for colum in attr_colums:
+        checked_attrs = []
+        for attr in colum:#
+            # Miramos si el atributo existe
+            if attr_dict.get(attr, None) is None:
+                continue
+            # Miramos si el atributo nos lo han pasado repetido
+            if attr in checked_attrs or attr in all_checked_attrs:
+                continue
+            checked_attrs.append(attr)
+        if not len(checked_attrs) == 0:
+            valid_colums.append(tuple(checked_attrs))
+            all_checked_attrs += checked_attrs
+    attr_colums = valid_colums  
     # Vemos para que tuplas no nos han pasado pareja
     singles = []
     for name in attr_dict:
@@ -59,16 +76,14 @@ def pretty(obj:object, *attr_colums, firstcolum_order:list=None) -> str:
     # y la maxima longitud del atributos o valor mas grande que va a 
     # haber en la columna. Tambien creamos la linea de guiones "-" de 
     # la fila principal
+    incorrect_colums = []
     table_dict = {}; dash = "-"; rows = 1
     for i, colum in enumerate(attr_colums):
         colum_max_length = 0
         if len(colum) > rows: rows = len(colum)
         for attr in colum:
             row_max_length = len(attr)
-            try:
-                attr_val_length = len(str(attr_dict[attr]))
-            except:
-                colum.remove(attr)
+            attr_val_length = len(str(attr_dict[attr]))
             if attr_val_length > row_max_length:
                 row_max_length = attr_val_length
             if row_max_length > colum_max_length:
@@ -78,12 +93,12 @@ def pretty(obj:object, *attr_colums, firstcolum_order:list=None) -> str:
             "maxc_length": colum_max_length
         }
         dash += "-"*(colum_max_length + 3)
-          
+    map(lambda colum: attr_colums.remove(colum), incorrect_colums)
     def center_cell(string:str, mlength:int, upper:bool=False,
-                        left_border:bool=True, right_border:bool=True):
+                    left_border:bool=True, right_border:bool=True):
         """Devuelve una linea con el string centrado en una celda
         dependiendo de la longitud maxima que puede tener el string 
-        en la celda. Se usa un espacio entre cada -> '|'. Ej: | string 
+        en la celda. Se usa un espacio entre cada -> '|'. Ej: | string | 
 
         Args:
             string ([type]): string a centrar en la celda
@@ -93,19 +108,21 @@ def pretty(obj:object, *attr_colums, firstcolum_order:list=None) -> str:
                 (Para los Headers)
 
         Returns:
-            [type]: Devuelve la celda con el valor centrado y con bordes
+            str: Devuelve la celda con el valor centrado y con bordes
                 en caso de que no se especifique lo contrario
         """
         str_length = len(string)
-        brd = "  "
+        leftb = " "
+        rightb = " "
         if upper: string = string.upper()
-        if left_border: brd = "| "
+        if left_border: leftb = "| "
+        if right_border: rightb = " |"
         if str_length == mlength:
-            return (brd + string + " "*(mlength - str_length) + " ")
+            return (leftb + string + " "*(mlength - str_length) + rightb)
         else:
             dhalf = floor((mlength - str_length)/2)
             uhalf = ceil((mlength - str_length)/2)
-            return (brd +  " "*dhalf + string + " "*uhalf + " ")
+            return (leftb +  " "*dhalf + string + " "*uhalf + rightb)
         
     # Creamos las lineas de atributos y valores de cada fila    
     table_str = dash
@@ -115,46 +132,42 @@ def pretty(obj:object, *attr_colums, firstcolum_order:list=None) -> str:
         subdash = ""
         last_empty = False
         for j, colum in enumerate(table_dict.values()):
-            right_border = True
-            left_border = True
-            last = j == len(table_dict.values()) - 1
+            is_first_colum = j == 0
             mlength = colum["maxc_length"]
             try:
                 # Celda llena
-                right_border = True
                 left_border = True
+                if not last_empty and not is_first_colum:
+                    left_border = False
                 attr = colum["colum"][i]
                 value = str(attr_dict[attr])
-                attr_cell = center_cell(attr, mlength, upper=True)
-                value_cell = center_cell(value, mlength)
-                attrs_line += attr_cell
-                values_line += value_cell
-                subdash += "-"*len(attr_cell)
-                if last_empty or j == 0: subdash += "-"
-                last_empty = False
-            except IndexError:
-                # Celda vacia 
-                attr = ""
-                value = ""
-                if j == 0 or last_empty: left_border = False
-                if last or last_empty: right_border = False
                 attr_cell = center_cell(
                     attr, mlength, 
-                    upper=True, left_border=left_border
+                    upper=True,
+                    left_border=left_border
                 )
                 value_cell = center_cell(
-                    value, mlength, 
+                    value, mlength,
                     left_border=left_border
                 )
                 attrs_line += attr_cell
                 values_line += value_cell
-                subdash += " "*(len(attr_cell)-1)
-                if j == 0 or last_empty: 
-                    subdash += " "
-                last_empty = True
-        block = f"\n{attrs_line}|\n{subdash}\n{values_line}|\n{subdash}"
-        if not right_border:        
-            block = f"\n{attrs_line}\n{subdash}\n{values_line}\n{subdash}"
+                subdash += "-"*len(attr_cell)
+                last_empty = False
+            except IndexError:
+                # Celda vacia 
+                void_cell = center_cell(
+                    "", mlength,
+                    upper=True, 
+                    left_border=False,
+                    right_border=False
+                )
+                subdash += " "*(len(void_cell))
+                if is_first_colum or last_empty:
+                    subdash += " "; void_cell += " "
+                attrs_line += void_cell; values_line += void_cell
+                last_empty = True 
+        block = f"\n{attrs_line}\n{subdash}\n{values_line}\n{subdash}"
         table_str += block
     return table_str
 
