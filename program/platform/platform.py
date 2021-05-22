@@ -87,7 +87,7 @@ def print_state():
             ("state", "started_up"), 
             ("networks", "connected_networks")
         ]
-        attrs_order = ["name", "state", "networks"]
+        attrs_order = ["container_image", "port", "app", "state", "networks", "port"]
         for c in cs:
             print(pretty(c, *pairs, firstcolum_order=attrs_order))
     else:

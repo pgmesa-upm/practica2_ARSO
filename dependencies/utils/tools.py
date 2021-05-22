@@ -21,6 +21,9 @@ def pretty(obj:object, *attr_colums, firstcolum_order:list=None) -> str:
         ------------------
         |  S1  | STOPPED | ...
         ------------------
+            .       .
+            .       .
+            .       .
 
     Args:
         obj (object): objeto cuyos atributos se quieren pasar a 
@@ -76,7 +79,8 @@ def pretty(obj:object, *attr_colums, firstcolum_order:list=None) -> str:
         }
         dash += "-"*(colum_max_length + 3)
           
-    def center_cell(string, mlength, upper=False, border=True):
+    def center_cell(string:str, mlength:int, upper:bool=False,
+                        left_border:bool=True, right_border:bool=True):
         """Devuelve una linea con el string centrado en una celda
         dependiendo de la longitud maxima que puede tener el string 
         en la celda. Se usa un espacio entre cada -> '|'. Ej: | string 
@@ -89,12 +93,13 @@ def pretty(obj:object, *attr_colums, firstcolum_order:list=None) -> str:
                 (Para los Headers)
 
         Returns:
-            [type]: [description]
+            [type]: Devuelve la celda con el valor centrado y con bordes
+                en caso de que no se especifique lo contrario
         """
         str_length = len(string)
         brd = "  "
         if upper: string = string.upper()
-        if border: brd = "| "
+        if left_border: brd = "| "
         if str_length == mlength:
             return (brd + string + " "*(mlength - str_length) + " ")
         else:
@@ -107,7 +112,7 @@ def pretty(obj:object, *attr_colums, firstcolum_order:list=None) -> str:
     for i in range(rows):
         attrs_line = ""
         values_line = ""
-        subdash = "-"
+        subdash = ""
         last_empty = False
         for j, colum in enumerate(table_dict.values()):
             right_border = True
@@ -115,6 +120,7 @@ def pretty(obj:object, *attr_colums, firstcolum_order:list=None) -> str:
             last = j == len(table_dict.values()) - 1
             mlength = colum["maxc_length"]
             try:
+                # Celda llena
                 right_border = True
                 left_border = True
                 attr = colum["colum"][i]
@@ -124,28 +130,27 @@ def pretty(obj:object, *attr_colums, firstcolum_order:list=None) -> str:
                 attrs_line += attr_cell
                 values_line += value_cell
                 subdash += "-"*len(attr_cell)
+                if last_empty or j == 0: subdash += "-"
                 last_empty = False
             except IndexError:
+                # Celda vacia 
                 attr = ""
                 value = ""
                 if j == 0 or last_empty: left_border = False
                 if last or last_empty: right_border = False
                 attr_cell = center_cell(
                     attr, mlength, 
-                    upper=True, border=left_border
+                    upper=True, left_border=left_border
                 )
                 value_cell = center_cell(
                     value, mlength, 
-                    border=left_border
+                    left_border=left_border
                 )
                 attrs_line += attr_cell
                 values_line += value_cell
-                if j == 0: subdash = " "*(len(attr_cell)) + "-"
-                elif last: subdash += " "*len(attr_cell)
-                elif last_empty:
-                    subdash = subdash[:-1]
-                    subdash += " "*(len(attr_cell))
-                else: subdash += " "*(len(attr_cell)-1) + "-"
+                subdash += " "*(len(attr_cell)-1)
+                if j == 0 or last_empty: 
+                    subdash += " "
                 last_empty = True
         block = f"\n{attrs_line}|\n{subdash}\n{values_line}|\n{subdash}"
         if not right_border:        
