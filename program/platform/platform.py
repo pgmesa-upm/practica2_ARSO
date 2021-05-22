@@ -82,8 +82,14 @@ def print_state():
         print("--> La plataforma esta vacia, no ha sido desplegada")
     print(" + CONTENEDORES")
     if cs != None:
+        pairs = [
+            ("name", "tag"), 
+            ("state", "started_up"), 
+            ("networks", "connected_networks")
+        ]
+        attrs_order = ["name", "state", "networks"]
         for c in cs:
-            print(pretty(c))
+            print(pretty(c, *pairs, firstcolum_order=attrs_order))
     else:
         print("     No hay contenedores creados en la plataforma")
     print(" + BRIDGES")

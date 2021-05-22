@@ -1,6 +1,8 @@
 
 from math import floor, ceil
 from contextlib import suppress
+from re import sub
+
 
 # -------------------------- HERRAMIENTAS ----------------------------
 # --------------------------------------------------------------------
@@ -9,7 +11,7 @@ from contextlib import suppress
 # -------------------------------------------------------------------- 
 
 # --------------------------------------------------------------------        
-def pretty(obj:object) -> str:
+def pretty(obj:object, *attr_colums, firstcolum_order:list=None) -> str:
     """Devuelve los atributos de un objeto en forma de string. (Como
     una tabla ordenada) 
     ej:
@@ -27,41 +29,129 @@ def pretty(obj:object) -> str:
     Returns:
         str: Tabla con los atributos del objeto
     """
-    dashes = ""
-    names_line = ""
-    values_line = ""
-    
-    prop = vars(obj)
-    names = prop.keys()
-    values = prop.values()
-    max_lengths = []
-    for name, val in zip(names, values):
-        m = max(len(name), len(str(val)))
-        dashes += "-"*(3 + m)
-        max_lengths.append(m)
-    dashes += "-"
-    for name, value, mlength in zip(names, values, max_lengths):
-        name_length = len(name)
-        value_length = len(str(value))
-        if name_length == mlength:
-            dhalf = floor((mlength - value_length)/2)
-            uhalf = ceil((mlength - value_length)/2)
-            names_line += ("| " + name.upper() + 
-                                " "*(mlength - name_length) + " ")
-            values_line += ("| " + " "*dhalf + str(value) + 
-                                                    " "*uhalf + " ")
+    attr_dict = vars(obj)
+    attr_colums = list(attr_colums)
+    # Vemos para que tuplas no nos han pasado pareja
+    singles = []
+    for name in attr_dict:
+        for c in attr_colums:
+            if name in c:
+                break
         else:
-            dhalf = floor((mlength - name_length)/2)
-            uhalf = ceil((mlength - name_length)/2)
-            names_line += ("| " +  " "*dhalf + name.upper() +
-                                                    " "*uhalf + " ")
-            values_line += ("| " + str(value) + 
-                                " "*(mlength - value_length) + " ")
-    names_line += "|"
-    values_line += "|"
-    string = (dashes + "\n" + names_line + "\n" + dashes + "\n" +
-                                        values_line + "\n" + dashes)
-    return string
+            singles.append((name,))
+    attr_colums += singles
+    # Ordenamos las tuplas segun nos lo especifiquen
+    ordered = []
+    if firstcolum_order is not None:
+        for attr in firstcolum_order:
+            for colum in attr_colums:
+                if attr in colum[0] and colum not in ordered:
+                    ordered.append(colum)
+                    break
+    for c in ordered:
+        if c in attr_colums:
+            attr_colums.remove(c)
+    attr_colums = ordered + attr_colums
+    # Guardamos en un diccionario, las columnas de atributos numeradas
+    # y la maxima longitud del atributos o valor mas grande que va a 
+    # haber en la columna. Tambien creamos la linea de guiones "-" de 
+    # la fila principal
+    table_dict = {}; dash = "-"; rows = 1
+    for i, colum in enumerate(attr_colums):
+        colum_max_length = 0
+        if len(colum) > rows: rows = len(colum)
+        for attr in colum:
+            row_max_length = len(attr)
+            try:
+                attr_val_length = len(str(attr_dict[attr]))
+            except:
+                colum.remove(attr)
+            if attr_val_length > row_max_length:
+                row_max_length = attr_val_length
+            if row_max_length > colum_max_length:
+                colum_max_length = row_max_length
+        table_dict[i+1] = {
+            "colum": colum,
+            "maxc_length": colum_max_length
+        }
+        dash += "-"*(colum_max_length + 3)
+          
+    def center_cell(string, mlength, upper=False, border=True):
+        """Devuelve una linea con el string centrado en una celda
+        dependiendo de la longitud maxima que puede tener el string 
+        en la celda. Se usa un espacio entre cada -> '|'. Ej: | string 
+
+        Args:
+            string ([type]): string a centrar en la celda
+            mlength ([type]): maxima longitud de un string que va a 
+                haber en esa columna
+            upper (bool, optional): para poner el string en mayusculas
+                (Para los Headers)
+
+        Returns:
+            [type]: [description]
+        """
+        str_length = len(string)
+        brd = "  "
+        if upper: string = string.upper()
+        if border: brd = "| "
+        if str_length == mlength:
+            return (brd + string + " "*(mlength - str_length) + " ")
+        else:
+            dhalf = floor((mlength - str_length)/2)
+            uhalf = ceil((mlength - str_length)/2)
+            return (brd +  " "*dhalf + string + " "*uhalf + " ")
+        
+    # Creamos las lineas de atributos y valores de cada fila    
+    table_str = dash
+    for i in range(rows):
+        attrs_line = ""
+        values_line = ""
+        subdash = "-"
+        last_empty = False
+        for j, colum in enumerate(table_dict.values()):
+            right_border = True
+            left_border = True
+            last = j == len(table_dict.values()) - 1
+            mlength = colum["maxc_length"]
+            try:
+                right_border = True
+                left_border = True
+                attr = colum["colum"][i]
+                value = str(attr_dict[attr])
+                attr_cell = center_cell(attr, mlength, upper=True)
+                value_cell = center_cell(value, mlength)
+                attrs_line += attr_cell
+                values_line += value_cell
+                subdash += "-"*len(attr_cell)
+                last_empty = False
+            except IndexError:
+                attr = ""
+                value = ""
+                if j == 0 or last_empty: left_border = False
+                if last or last_empty: right_border = False
+                attr_cell = center_cell(
+                    attr, mlength, 
+                    upper=True, border=left_border
+                )
+                value_cell = center_cell(
+                    value, mlength, 
+                    border=left_border
+                )
+                attrs_line += attr_cell
+                values_line += value_cell
+                if j == 0: subdash = " "*(len(attr_cell)) + "-"
+                elif last: subdash += " "*len(attr_cell)
+                elif last_empty:
+                    subdash = subdash[:-1]
+                    subdash += " "*(len(attr_cell))
+                else: subdash += " "*(len(attr_cell)-1) + "-"
+                last_empty = True
+        block = f"\n{attrs_line}|\n{subdash}\n{values_line}|\n{subdash}"
+        if not right_border:        
+            block = f"\n{attrs_line}\n{subdash}\n{values_line}\n{subdash}"
+        table_str += block
+    return table_str
 
 # --------------------------------------------------------------------
 def objectlist_as_dict(l:list, key_attribute:str) -> dict:
