@@ -158,6 +158,9 @@ def lxc_image_list(print_=False, print_format="table") -> dict:
     return rearranged_dict
     
 # --------------------------------------------------------------------   
+def process_lxccsv(string:str) -> dict:
+    pass
+
 def process_lxctable(string:str) -> dict:
     """Analiza una lista de lxc y proporciona toda su informacion 
     en forma de diccionario para que sea facilmente accesible.

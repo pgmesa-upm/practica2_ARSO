@@ -58,16 +58,18 @@ def update_conexions():
         # Conectamos load balancer a los 2 bridges y el resto solo 
         # al bridge lxdbr0 (el que crea por defecto lxd) y cliente 
         # solo a lxdbr1
+        lxdbr0_exists = bgs_dict.get("lxdbr0", None) is not None
+        lxdbr1_exists = bgs_dict.get("lxdbr1", None) is not None
         if c.tag == load_balancer.TAG:
-            if not c.connected_networks["eth0"]:
+            if not c.connected_networks["eth0"] and lxdbr0_exists:
                 bridges.attach(c.name, bgs_dict["lxdbr0"], "eth0")
-            if not c.connected_networks["eth1"]:
+            if not c.connected_networks["eth1"] and lxdbr1_exists:
                 bridges.attach(c.name, bgs_dict["lxdbr1"], "eth1")
         elif c.tag == servers.TAG or c.tag == data_base.TAG:
-            if not c.connected_networks["eth0"]:
+            if not c.connected_networks["eth0"] and lxdbr0_exists:
                 bridges.attach(c.name, bgs_dict["lxdbr0"], "eth0")
         elif c.tag == client.TAG:
-            if not c.connected_networks["eth0"]:
+            if not c.connected_networks["eth0"] and lxdbr1_exists:
                 bridges.attach(c.name, bgs_dict["lxdbr1"], "eth0")
         containers.connect_to_networks(c)
     register.update("updates", {})
