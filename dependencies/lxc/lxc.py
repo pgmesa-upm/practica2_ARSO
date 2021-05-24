@@ -3,6 +3,7 @@ import subprocess
 from time import sleep
 import re
 import json
+import csv
 
 
 _lxc_list_formats = ["table", "csv", "json", "yaml"]
@@ -74,9 +75,8 @@ def _lxc_generic_list(cmd:list, print_:bool=False,
         print(out)
     # Devuelve una lista con la informacion de cada imagen en
     # forma de diccionario
-    table = run(cmd)
-    return process_lxctable(table)
-
+    csv = run(cmd + ["--format", "csv"])
+    return _process_lxccsv(csv)
 
 def lxc_list(print_:bool=False, print_format:str="table") -> dict:
     """Se encarga de mostrar la lista de contenedores de lxc, pero 
@@ -84,26 +84,19 @@ def lxc_list(print_:bool=False, print_format:str="table") -> dict:
     aparecer, la funcion espera a que se haya cargado toda la
     informacion para mostrar la lista. Comprueba que todas las ips
     hayan aparecido"""
-    cmd = ["lxc", "list"]
-    dic = _lxc_generic_list(
-        cmd,
+    cs_infolist = _lxc_generic_list(
+        ["lxc", "list"],
         print_=print_, 
         print_format=print_format
     )
     # Cambiamos la forma de presentar el diccionario
-    headers = list(dic.keys())
-    my_headers = ["NAME", "STATE", "IPV4", "IPV6", "TYPE", "SNAPSHOTS"]
-    rearranged_dict = {}
-    keys = dic[headers[0]] # Nombres de contenedores seran las claves
-    if len(keys) > 0: 
-        for i, k in enumerate(keys):
-            new_page = {}
-            for j, h in enumerate(headers):
-                new_page.update({my_headers[j]: dic[h][i]})
-            rearranged_dict.update({k: new_page})
+    cs_infodict= {}
+    headers = ["NAME", "STATE", "IPV4", "IPV6", "TYPE", "SNAPSHOTS"]
+    for c_info in cs_infolist:
+        cs_infodict[c_info[0]] = dict(zip(headers, c_info))
     # Modificamos la forma de presentar las networks ipv4
-    for name in rearranged_dict:
-        info = rearranged_dict[name]["IPV4"]
+    for name in cs_infodict:
+        info = cs_infodict[name]["IPV4"]
         nets = {}
         if info != "":
             if type(info) != list:
@@ -114,54 +107,93 @@ def lxc_list(print_:bool=False, print_format:str="table") -> dict:
                         splitted.remove("")
                 ipv4, current_eth = splitted
                 nets[current_eth] = ipv4
-        rearranged_dict[name]["IPV4"] = nets
-    return rearranged_dict
+        cs_infodict[name]["IPV4"] = nets
+    return cs_infodict
     
 def lxc_network_list(print_=False, print_format="table") -> dict:
     """Muestra la network list de lxc (bridges creados)"""
-    dic = _lxc_generic_list(
+    bgs_infolist = _lxc_generic_list(
         ["lxc", "network", "list"],
         print_=print_, 
         print_format=print_format
     )
     # Cambiamos la forma de presentar el diccionario
-    headers = list(dic.keys())
-    my_headers = ["NAME", "TYPE", "MANAGED", "DESCRIPTION", "USED BY"]
-    rearranged_dict = {}
-    keys = dic[headers[0]] # Nombres de contenedores seran las claves
-    if len(keys) > 0: 
-        for i, k in enumerate(keys):
-            new_page = {}
-            for j, h in enumerate(headers):
-                new_page.update({my_headers[j]: dic[h][i]})
-            rearranged_dict.update({k: new_page})
-    return rearranged_dict
+    bgs_infodict= {}
+    headers = ["NAME", "TYPE", "MANAGED", "DESCRIPTION", "USED BY"]
+    for b_info in bgs_infolist:
+        bgs_infodict[b_info[0]] = dict(zip(headers, b_info))
+    return bgs_infodict
+    
 
 def lxc_image_list(print_=False, print_format="table") -> dict:
-    dic = _lxc_generic_list(
+    image_infolist = _lxc_generic_list(
         ["lxc", "image", "list"],
         print_=print_, 
         print_format=print_format
     )
     # Cambiamos la forma de presentar el diccionario
-    headers = list(dic.keys())
-    my_headers = ["ALIAS", "FINGERPRINT", "PUBLIC", "DESCRIPTION",
-                  "ARCHITECTURE", "TYPE", "SIZE", "UPLOAD DATE"]
-    rearranged_dict = {}
-    keys = dic[headers[1]] # Nombres de contenedores seran las claves
-    if len(keys) > 0: 
-        for i, k in enumerate(keys):
-            new_page = {}
-            for j, h in enumerate(headers):
-                new_page.update({my_headers[j]: dic[h][i]})
-            rearranged_dict.update({k: new_page})
-    return rearranged_dict
+    images_infodict= {}
+    headers = ["ALIAS", "FINGERPRINT", "PUBLIC", "DESCRIPTION",
+                    "ARCHITECTURE", "TYPE", "SIZE", "UPLOAD DATE"]
+    for im_info in image_infolist:
+        images_infodict[im_info[1]] = dict(zip(headers, im_info))
+    return images_infodict
     
 # --------------------------------------------------------------------   
-def process_lxccsv(string:str) -> dict:
-    pass
+def _process_lxccsv(string:str) -> list:
+    """Procesa un string csv devuelto por lxc.
+    
+     - NOTAS del csv que devuelve lxc:
+    Las celdas de mas de un elemento vienen con
+    un salto de linea entre elementos, no hay comas dentro, y el conjunto
+    viene entre comillas. Los cambios de linea del csv se marcan
+    con un salto de linea. Los strings de mas de una palabra 
+    vienen entre comillas (cuidado al hacer .split(",") si el string
+    tiene comas dentro, se fragmentara la celda).
 
-def process_lxctable(string:str) -> dict:
+    Args:
+        string (str): csv a procesar
+
+    Returns:
+        list: Lista con las filas del documento csv
+    """
+    start = 0; mark = "#;#"; index = 0; pairs = []
+    while True:
+        for _ in range(2):
+            substring = string[start:]
+            index = substring.find('"')
+            start += index + 1
+            pairs.append(start)
+        if index == -1:
+            break
+        part_to_change = string[pairs[0]:pairs[1]-1]
+        new_part = part_to_change.replace(",", mark)
+        string = string.replace(part_to_change, new_part)
+        start += len(mark)
+        pairs = [] 
+    first_division = string.split(",")
+    rows = []
+    row = []
+    for elem in first_division:
+        # Procesamos las celdas con mas de un elemento
+        if '"' in elem and mark not in elem:
+            elem = re.split("\"|\n", elem)[1:-1]
+        # Procesamos los cambios de fila
+        elif "\n" in elem:
+            row_last_elem, elem = elem.split("\n")
+            if mark in row_last_elem:
+                row_last_elem = row_last_elem.replace(mark, ",")
+                row_last_elem = row_last_elem.replace('"', "")
+            if mark in elem:
+                elem = elem.replace(mark, ",")
+                elem = elem.replace('"', "")
+            row.append(row_last_elem)
+            rows.append(row)
+            row = []
+        row.append(elem)
+    return rows
+
+def _process_lxctable(string:str) -> dict:
     """Analiza una lista de lxc y proporciona toda su informacion 
     en forma de diccionario para que sea facilmente accesible.
     CUIDADO: Los headers de la lista dependen del idioma en el que

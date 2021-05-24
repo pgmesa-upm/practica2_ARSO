@@ -138,7 +138,7 @@ def change_app(server:Container, app_path:str, name:str):
                 f"aplicacion '{name}'")
         serv_logger.error(err)
         return
-    msg = f" Actualizando aplicacion de servidor '{server.name}'"
+    msg = f" Actualizando aplicacion de servidor '{server.name}'..."
     serv_logger.info(msg)
     try: 
         # Eliminamos la aplicacion anterior
