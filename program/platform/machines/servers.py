@@ -133,11 +133,11 @@ def change_app(server:Container, app_path:str, name:str):
         err = f" El servidor {server.name} no esta arrancado"
         serv_logger.error(err)
         return
-    if server.app == name:
-        err = (f" El servidor '{server.name}' ya esta usando la " + 
-                f"aplicacion '{name}'")
-        serv_logger.error(err)
-        return
+    # if server.app == name:
+    #     err = (f" El servidor '{server.name}' ya esta usando la " + 
+    #             f"aplicacion '{name}'")
+    #     serv_logger.error(err)
+    #     return
     msg = f" Actualizando aplicacion de servidor '{server.name}'..."
     serv_logger.info(msg)
     try: 

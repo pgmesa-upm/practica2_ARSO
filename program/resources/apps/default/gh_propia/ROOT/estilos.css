@@ -1,0 +1,93 @@
+
+html {
+    background-color:   #eee;
+}
+
+* {
+    margin:0px;
+    padding:0;
+}
+
+body {
+    font: 16px; 
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    text-align: center;
+}
+
+header, nav, section {
+    /*background-color: #eee;*/
+    background: linear-gradient(white,#eee);
+    border: 1px solid black;
+    padding: 1%;
+    /*margin-bottom: 1px;*/
+    margin: 5px 15px;
+    color: black;
+}
+/* Tiene en cuanta el numero de pixeles que tiene en horizontal (En moviles con alta resolución tienen muchos pixeles horizontales aunque la 
+pantalla sea pequeña*/ 
+@media (max-width: 480px){ /*1em = 16 px*/
+    header, footer {
+        display: none;
+    }
+}
+/*Tiene en cuenta solo el ancho de la pantalla del dispositivo, da igual si tiene mucha resolución de pixeles o no,(utiliza un tamaño de pixel 
+estándar para medidas de tamaño, no los que utiliza el dispositivo para su resolución, que pueden ser mucho más pequeños*/
+@media (max-device-width: 480px){
+    header, footer {
+        display: none;
+    }
+}
+/* los dos medias unidos se podrian poner asi: "@media only screen and (max-width: 700px), only screen and (max-device-width: 700px) {}"*/
+
+footer {
+    background-color:#eee;
+    text-align: center;
+    /*background: linear-gradient(#eee, rgb(28, 151, 223));*/
+    margin: 5px 15px;
+}
+header{
+    margin-top: 15px;
+}
+
+.nav {
+    margin: 0px 10px 0px 0px;
+}
+select {
+    font-size: 18px;
+    border-color: white;
+    box-shadow:black 1px 1px 1px;
+    padding: 2%;
+    margin-bottom: 2px;
+}
+.boton {
+    font-size: 16px;
+    background-color:white;
+    box-shadow: black 1px 1px 1px;
+    font-weight: bold;
+    padding: 2%;
+    margin-top: 3px;
+    border-radius: 5px;
+    border-color: white;
+}
+input {
+    box-shadow: black 1px 1px 1px;
+}
+h1, h2{
+    margin-bottom: 10px;
+    text-align: left;
+}
+
+td {
+    font-weight: bold;
+    padding: 0 2px;
+    max-width: max-content;
+    text-align: left;
+}
+option {
+    padding: 5%;
+}
+
+#info {
+    width: 70%;
+    padding: 0 10% 0 0;
+}

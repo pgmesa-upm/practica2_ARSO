@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Dar de Alta</title>
+    <link rel="stylesheet" href="estilos.css">
+    <link rel="icon" type="image/ico" href="favicon.ico" >
+</head>
+<body>
+    <header>
+       <table>
+            <tr>
+               <td><img src="Mis_archivos_web/logo.png" alt="No se ha encontrado el logo"></td>
+               <td><h1>Gestión Hospitalaria</h1></td>
+            </tr>
+       </table>
+    </header>
+    <nav>
+        <table>
+            <tr>
+               <td><a href="index.html" class="nav">Inicio</a></td>
+               <td><a href="alta" class="nav">Alta</a></td>
+               <td><a href="baja" class="nav">Baja</a></td>
+               <td><a href="consulta" class="nav">Consulta</a></td>
+            </tr>
+         </table>
+   </nav>
+   <section>
+       <h1>Alta</h1>
+       <h2></h2>
+        <form action="alta" method="POST" name="form_alta">
+            <table>
+                <tr>
+                    <td>Nombre:</td>
+                    <td><input type="text" name="nombre"></td>
+                </tr>
+                <tr>
+                    <td>Apellidos:</td>
+                    <td><input type="text" name="apellidos"></td>
+                </tr>
+                <tr>
+                    <td>DNI:</td>
+                    <td><input type="text" name="dni" ></td>
+                </tr>
+                <tr><td><input type="submit" id="boton_alta" value="Dar de alta" class="boton"></td></tr>
+            </table>
+        </form>
+   </section>
+   <footer>
+        <p>Nombre: Pablo García Mesa</p>
+        <p>Email: <a href="mailto:%20pablogmesa00@gmail.com">pablogmesa00@gmail.com</a></p>
+        <p><a href="https://moodle.upm.es/titulaciones/oficiales/user/profile.php?id=158757">Link a perfil de moodle</a></p>
+    </footer>
+    <script src="validar.js"></script>
+</body>
+
+</html>
