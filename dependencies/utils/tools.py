@@ -1,8 +1,7 @@
 
 from math import floor, ceil
 from contextlib import suppress
-from re import sub
-
+import re
 
 # -------------------------- HERRAMIENTAS ----------------------------
 # --------------------------------------------------------------------
@@ -170,6 +169,10 @@ def pretty(obj:object, *attr_colums, firstcolum_order:list=None) -> str:
         block = f"\n{attrs_line}\n{subdash}\n{values_line}\n{subdash}"
         table_str += block
     return table_str
+# --------------------------------------------------------------------
+
+def format_str():
+    pass
 
 # --------------------------------------------------------------------
 def objectlist_as_dict(l:list, key_attribute:str) -> dict:

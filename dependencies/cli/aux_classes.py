@@ -36,6 +36,8 @@ class Command:
         self.extra_arg = extra_arg
         self.choices = choices
         self.default = default
+        if description is None:
+            description = ""
         self.description = description 
         self.mandatory = mandatory
         self.multi = multi
@@ -87,7 +89,9 @@ class Flag:
                  description:str=None):
         self.name = name
         self.ncwf = notCompatibleWithFlags + [self.name]
-        self.description = description
+        if description is None:
+            description = ""
+        self.description = description 
         
     def __str__(self) -> str:
         """Define como se va a representar el flag en forma

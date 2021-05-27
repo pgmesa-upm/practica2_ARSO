@@ -1,5 +1,6 @@
 
 from .aux_classes import Command, Flag
+from .str_utils import format_str
 
 
 class Cli:
@@ -197,6 +198,30 @@ class Cli:
     def printHelp(self, command=None):
         """Imprime las descripciones de cada comando y flag de la cli
         de forma estructurada"""
+        # ------------------ Parametros a modificar ------------------
+        maxline_length = 90; cmd_indent = 4; opt_indent = 8
+        cmd_first_line_diff = 10; opt_first_line_diff = 10
+        # ------------------------------------------------------------
+        def apply_shellformat(string:str, indent:int=4):
+            return format_str(
+                string, 
+                maxline_length=maxline_length, 
+                indent=indent, 
+                tripleq_mode=True
+            ) 
+        def untab_firstline(string:str, indent:int):
+            untabbed = ""
+            index = string.find("\n")
+            if index != -1:
+                untabbed += string[:index] + "\n"
+                #print(untabbed)
+                if index < len(string) -1:
+                    rest = string[index+1:]
+                    untabbed += apply_shellformat(rest, indent=indent)
+            else:
+                untabbed = string
+            return untabbed 
+        
         commands = self.commands.values()
         if command is not None:
             commands = [command]
@@ -204,18 +229,35 @@ class Cli:
                                     "[options] <parameters> [flags]")
         print(" + Commands: ")
         for cmd in commands:
-            print(f"    -> {cmd.name} --> {cmd.description}")
+            description = f"    -> {cmd.name} --> {cmd.description}"
+            formatted = apply_shellformat(
+                description, indent=cmd_indent
+            )
+            formatted = untab_firstline(
+                formatted, indent=cmd_indent+cmd_first_line_diff
+            )
+            print(formatted)
             if len(cmd.options) > 0:
                 print(f"        - options:")
                 for opt in cmd.options.values():
-                    info = f"=> '{opt.name}' --> {opt.description}"
-                    print("          ", info)
+                    description = f"=> '{opt.name}' --> {opt.description}"
+                    formatted = apply_shellformat(
+                        description, indent=opt_indent
+                    )
+                    formatted = untab_firstline(
+                        formatted, indent=opt_indent+opt_first_line_diff
+                    )
+                    print(formatted)
         print(" + Flags: ")   
         for flag in self.flags.values():
-            if not flag.description == None:
-                print(f"    -> {flag.name} --> {flag.description}")
-            else:
-                print(f"    -> {flag.name}")
+            description = f"    -> {flag.name} --> {flag.description}"
+            formatted = apply_shellformat(
+                description, indent=cmd_indent
+            )
+            formatted = untab_firstline(
+                formatted, indent=cmd_indent+cmd_first_line_diff
+            )
+            print(formatted)
 
 # -------------------------------------------------------------------- 
 class CmdLineError(Exception):
