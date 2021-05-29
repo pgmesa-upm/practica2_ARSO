@@ -161,73 +161,71 @@ def change_app(server:Container, app_path:str, name:str):
     serv_logger.info(msg)
 
 # --------------------------------------------------------------------
-def mark_htmlindexes(*servers, undo=False):
+def mark_htmlindexes(s:Container, undo=False):
     # Para modificar el index.html de la aplicacion de cada servidor
     # y ver quien es quien. Replace elimina el index.html que haya
     # en el contenedor
     word1 = "Marcando"
     if undo:
         word1 = "Desmarcando"
-    serv_logger.info(f" {word1} servidores...")
     index_dir = f"{tomcat_app_path}/ROOT/"
     index_path = index_dir+"index.html"
-    for s in servers:
-        if s.state != "RUNNING":
-            serv_logger.error(f" El servidor {s.name} no esta arrancado")
-            continue
-        if s.marked and not undo: 
-            serv_logger.error(f" El servidor {s.name} ya esta marcado")
-            continue
-        if not s.marked and undo:
-            serv_logger.error(f" El servidor {s.name} no esta marcado")
-            continue
-        serv_logger.info(f" {word1} servidor '{s.name}'")
-        pulled_file = "index.html"
-        try:  
-            s.pull(index_path, pulled_file)
-        except lxc.LxcError as err:
-            err_msg = (f" Error al descargar el index.html " + 
-                                f"del contenedor '{s.name}':" + str(err))
-            serv_logger.error(err_msg)
-            return
-        with open(pulled_file, "r") as file:
-            index = file.read()
-        # Vemos donde hay que introducir/quitar la marca
-        mark = f"\n<h1> Servidor {s.name} </h1>" 
-        if not undo:
-            simbol = "<html"
-            chars = list(index)
-            start = index.find(simbol)
-            html_label = ""
-            for i in range(start,len(chars)):
-                char = chars[i]
-                html_label += char
-                if char == ">":
-                    break
-            old = html_label
-            new = html_label + mark
-        else:
-            old = mark
-            new = ""
-        # Marcamos o desmarcamos el index.html
-        configured_index = index.replace(old, new)
-        with open(pulled_file, "w") as f:
-            f.write(configured_index)
-        try:  
-            s.push(pulled_file, index_dir)
-        except lxc.LxcError as err:
-            err_msg = (f" Error al enviar el index.html marcado" + 
-                                f"al contenedor '{s.name}':" + str(err))
-            serv_logger.error(err_msg)
-            return
-        if undo:
-            s.marked = False
-        else:
-            s.marked = True
-        word2 = word1.lower().replace("n", "")
-        serv_logger.info(f" Servidor '{s.name}' {word2}")
-        os.remove("index.html")
-    containers.update_containers(*servers)
+    if s.state != "RUNNING":
+        serv_logger.error(f" El servidor {s.name} no esta arrancado")
+        return
+    if s.marked and not undo: 
+        serv_logger.error(f" El servidor {s.name} ya esta marcado")
+        return
+    if not s.marked and undo:
+        serv_logger.error(f" El servidor {s.name} no esta marcado")
+        return
+    serv_logger.info(f" {word1} servidor '{s.name}'")
+    pulled_file = "index.html"
+    try:  
+        s.pull(index_path, pulled_file)
+    except lxc.LxcError as err:
+        err_msg = (f" Error al descargar el index.html " + 
+                            f"del contenedor '{s.name}':" + str(err))
+        serv_logger.error(err_msg)
+        return
+    with open(pulled_file, "r") as file:
+        index = file.read()
+    # Vemos donde hay que introducir/quitar la marca
+    mark = f"\n<h1> Servidor {s.name} </h1>" 
+    if not undo:
+        simbol = "<html"
+        chars = list(index)
+        start = index.find(simbol)
+        html_label = ""
+        for i in range(start,len(chars)):
+            char = chars[i]
+            html_label += char
+            if char == ">":
+                break
+        old = html_label
+        new = html_label + mark
+    else:
+        old = mark
+        new = ""
+    # Marcamos o desmarcamos el index.html
+    configured_index = index.replace(old, new)
+    with open(pulled_file, "w") as f:
+        f.write(configured_index)
+    try:  
+        s.push(pulled_file, index_dir)
+    except lxc.LxcError as err:
+        err_msg = (f" Error al enviar el index.html marcado" + 
+                            f"al contenedor '{s.name}':" + str(err))
+        serv_logger.error(err_msg)
+        return
+    if undo:
+        s.marked = False
+    else:
+        s.marked = True
+    word2 = word1.lower().replace("n", "")
+    serv_logger.info(f" Servidor '{s.name}' {word2}")
+    os.remove("index.html")
+    containers.update_containers(s)
     
 # --------------------------------------------------------------------
 def _process_names(num:int, *names) -> list:

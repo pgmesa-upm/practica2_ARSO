@@ -1,6 +1,6 @@
 
 from .aux_classes import Command, Flag
-from .str_utils import format_str
+from .cli_utils import format_str
 
 
 class Cli:
@@ -199,7 +199,7 @@ class Cli:
         """Imprime las descripciones de cada comando y flag de la cli
         de forma estructurada"""
         # ------------------ Parametros a modificar ------------------
-        maxline_length = 90; cmd_indent = 4; opt_indent = 8
+        maxline_length = 100; cmd_indent = 4; opt_indent = 12
         cmd_first_line_diff = 10; opt_first_line_diff = 10
         # ------------------------------------------------------------
         def apply_shellformat(string:str, indent:int=4):

@@ -5,11 +5,6 @@ from math import ceil
 
 def format_str(string:str, maxline_length:int=None, 
                indent:int=None, tripleq_mode=False) -> str:
-    # -------------------------------
-    # Añadir comprobaciones de que lo que me han pasado
-    # es correcto ------- y añadir que los espacios cuenten como 
-    # espacio ocupado en la linea
-
     # Configuramos el modo del string
     reg_expression = " "
     if tripleq_mode:
@@ -34,12 +29,13 @@ def format_str(string:str, maxline_length:int=None,
     if maxline_length is not None:
         start_index = 0
         final_index = 0
+        maxline_length -= indent
         # Vemos las segmentaciones que vamos a hacer del string
-        # segun la longitud especificada de cada linea
-        iterations = ceil(len(string)/maxline_length) 
+        # segun la longitud especificada de cada linea y los 
+        # espacios de inicio de cada una
         # Formateamos cada linea
-        for _ in range(iterations):
-            final_index += maxline_length + 1
+        while True:
+            final_index += maxline_length
             if final_index >= len(string):
                 line = string[start_index:]
                 formatted_string += line
@@ -53,5 +49,5 @@ def format_str(string:str, maxline_length:int=None,
                 final_index += maxline_length
             line = string[start_index:final_index] + "\n" + spaces
             formatted_string += line
-            start_index = final_index + 1 
+            start_index = final_index + 1
         return formatted_string

@@ -14,6 +14,13 @@ app_logger = logging.getLogger(__name__)
 apps_repo_path = "program/resources/apps"
 apps_default_path = f"{apps_repo_path}/default"
 # --------------------------------------------------------------------
+def multi(func):
+    def for_each (*args, **opt_arg):
+        for arg in args:
+            func(arg, **opt_arg)
+    return for_each
+
+# --------------------------------------------------------------------
 def get_appnames() -> list:
     dirs = os.listdir(apps_repo_path)
     apps = []
@@ -48,8 +55,9 @@ def list_apps():
         msg = "El repositorio de aplicaciones esta vacio"
     print("     --> ", msg)
     
-# --------------------------------------------------------------------   
-def add_app(path:str, name:str=None):
+# --------------------------------------------------------------------  
+@multi 
+def add_apps(path:str, name:str=None):
     # Comprobamos que la ruta existe
     if not os.path.exists(path):
         app_logger.error(f" La ruta absoluta '{path}' no existe")
@@ -181,8 +189,9 @@ def unset_default():
         app_logger.info(msg)
     msg = f" Ya no hay una aplicacion establecida por defecto"
     app_logger.info(msg)
-        
-def remove_app(app_name:str):
+
+@multi     
+def remove_apps(app_name:str):
     base_path = apps_repo_path
     if app_name == "default" or app_name == get_defaultapp(): 
         app_name = get_defaultapp()
@@ -212,14 +221,24 @@ def clear_repository(skip:list=[]):
         app_logger.info(f" App '{app_name}' eliminada")
         
 # --------------------------------------------------------------------
-def mark_apps(undo=False):
+def mark_apps(*servs, undo=False):
     cs = register.load(containers.ID)
     if cs is None:
         app_logger.error(" No hay contenedores creados")
         return
-    servs = list(filter(lambda c: c.tag == servers.TAG,cs))
-    if len(servs) == 0:
+    existing_servs = list(filter(lambda c: c.tag == servers.TAG,cs))
+    existing_servs_names = list(map(lambda s: s.name, existing_servs))
+    if len(existing_servs) == 0:
         app_logger.error(" No hay servidores en funcionamiento")
         return
-    servers.mark_htmlindexes(*servs, undo=undo)
+    if len(servs) == 0:
+        servs = existing_servs
+    else:
+        servs = list(filter(lambda s: s.name in servs, existing_servs))
+    for serv in servs:
+        if serv.name not in existing_servs_names:
+            msg = f" El servidor '{serv}' no existe en el programa"
+            app_logger.error(msg)
+            continue
+        servers.mark_htmlindexes(serv, undo=undo)
 # --------------------------------------------------------------------

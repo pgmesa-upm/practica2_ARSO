@@ -395,11 +395,11 @@ def change(options={}, flags={}):
 # --------------------------------------------------------------------       
 def app(options={}, flags={}):
     if "markservs" in options:
-        apps.mark_apps()
+        apps.mark_apps(*options["markservs"])
     elif "unmarkservs" in options:
-        apps.mark_apps(undo=True)
+        apps.mark_apps(*options["unmarkservs"], undo=True)
     elif "add" in options:
-        apps.add_app(options["add"][0])
+        apps.add_apps(*options["add"])
     elif "use" in options:
         apps.use_app(options["use"][0])
         if "-m" in flags:
@@ -411,15 +411,16 @@ def app(options={}, flags={}):
     elif "list" in options:
         apps.list_apps()
     elif "rm" in options:
-        app_name = options["rm"][0]
+        app_names = options["rm"]
         if not "-f" in flags:
-            if app_name == apps.get_defaultapp():
-                print(f"La app '{app_name}' esta establecida como " + 
+            default = apps.get_defaultapp()
+            if default in app_names:
+                print(f"La app '{default}' esta establecida como " + 
                     "default")
                 question = "¿Eliminar la app de todas formas?(y/n): "
                 answer = str(input(question))
                 if answer.lower() != "y": return
-        apps.remove_app(app_name)
+        apps.remove_apps(*app_names)
     elif "emptyrep" in options:
         skip = []
         if not "-f" in flags:
