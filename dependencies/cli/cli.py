@@ -67,30 +67,22 @@ class Cli:
             if len(args) == 0:
                 raise CmdLineError("No se han proporcionado argumentos")
             if args[0] == cmd.name:
-                # Separamos por partes la linea de comandos
-                ant = args[0]; parts = {ant: ""}; last_index = 1
-                for i, arg in enumerate(args):
-                    if arg in cmd.options:
-                        parts[ant] = args[last_index:i]
-                        last_index = i + 1
-                        ant = arg
-                parts[ant] = args[last_index:]
-                # Comprobamos si puede haber mas de una opcion y si es
-                # obligatorio que haya al menos una
-                option_names = ""
-                for opt in cmd.options.values():
-                    option_names += opt.name + ", "
-                if len(parts) <= 1 and cmd.mandatory_opt: 
-                    err = (f"El comando '{cmd.name}' requiere una opcion " + 
-                           f"extra '{option_names[:-2]}'")
-                    raise CmdLineError(err)
-                elif len(parts) > 2 and not cmd.multi_opt:
-                    err = (f"El comando '{cmd.name}' solo admite una " +
-                           f"opcion extra entre '{option_names[:-2]}'")
-                    raise CmdLineError(err)
+                parts = self._split_line(cmd, args)
                 # Vemos si cada parte es válida y la guardamos en 
                 # un diccionario
                 processed_line = {"cmd": {}, "options": {}, "flags": []}
+                params = self._check_command(cmd, parts.pop(cmd.name))
+                processed_line["cmd"] = {cmd.name: params}
+                print(parts)
+                # Procesamos las opciones del comando principal y de cada
+                # opcion de forma recursiva
+                for opt_name in parts:
+                    opt = cmd.options[opt_name]
+                    options = self._process_options(opt, parts[opt_name])
+                    
+                    processed_line["options"][opt_name] = options
+                print(processed_line)
+                return 
                 for cmd_name, params in parts.items():
                     try:
                         command = cmd.options[cmd_name]
@@ -104,6 +96,48 @@ class Cli:
                 processed_line["flags"] = inFlags
                 return processed_line
         raise CmdLineError(f"El comando '{args[0]}' no se reconoce")
+    
+    def _process_options(self, opt:Command, args:list):
+        print(opt, args)
+        parts = self._split_line(opt, [opt.name] + args)
+        processed_line = {"cmd": {}, "options": {}, "flags": []}
+        params = self._check_command(opt, parts.pop(opt.name))
+        processed_line["cmd"] = {opt.name: params}
+        for opt_name in parts:
+            print(parts)
+            print(opt.name, opt.options)
+            sub_opt = opt.options[opt_name]
+            options = self._process_options(sub_opt, parts[opt_name])
+            processed_line["options"][sub_opt.name] = options
+        return processed_line
+    
+    @staticmethod
+    def _split_line(cmd:Command, args:list):
+        # Separamos por partes la linea de comandos
+        ant = args[0]; parts = {ant: ""}; last_index = 1
+        for i, arg in enumerate(args):
+            if arg in cmd.options:
+                # if ant != cmd.name and parts.get(ant, None) is not None:
+                #     msg = f"El comando '{ant}' esta repetido"
+                #     raise CmdLineError(msg)
+                parts[ant] = args[last_index:i]
+                last_index = i + 1
+                ant = arg
+        parts[ant] = args[last_index:]   
+        # Comprobamos si puede haber mas de una opcion y si es
+        # obligatorio que haya al menos una
+        option_names = ""
+        for opt in cmd.options.values():
+            option_names += opt.name + ", "
+        if len(parts) <= 1 and cmd.mandatory_opt: 
+            err = (f"El comando '{cmd.name}' requiere una opcion " + 
+                f"extra '{option_names[:-2]}'")
+            raise CmdLineError(err)
+        elif len(parts) > 2 and not cmd.multi_opt:
+            err = (f"El comando '{cmd.name}' solo admite una " +
+                f"opcion extra entre '{option_names[:-2]}'")
+            raise CmdLineError(err)
+        return parts
       
     @staticmethod
     def _check_command(cmd:Command, params:list) -> list:

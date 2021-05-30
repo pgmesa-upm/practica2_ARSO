@@ -294,6 +294,11 @@ def config_cli() -> Cli:
         "setdef", description=msg, 
         extra_arg=True, mandatory=True
     )
+    pr = Command("hola")
+    pr.add_option("hola2")
+    pr.add_option("hola3")
+    app.add_cmd(pr)
+
     # -------------
     msg = """
     makes the default app to be none

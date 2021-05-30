@@ -62,6 +62,9 @@ class Command:
             default=default, 
             description=description
         )
+    
+    def add_cmd(self, cmd):
+        self.options[cmd.name] = cmd
      
     def __str__(self) -> str:
         """Define como se va a representar el comando en forma
