@@ -12,7 +12,7 @@ from dependencies.cli.aux_classes import Command, Flag
 # En este diccionario se asocia a cada comando una funcion a ejecutar
 _commands = {}
 # --------------------------------------------------------------------
-def execute(args:dict):
+def execute(cmd_line:dict):
     """Ejecuta la funcion correspondiente al comando introducido por 
     el usuario
 
@@ -21,10 +21,11 @@ def execute(args:dict):
             ya validada, es decir, debe ser correcta
     """
     for cmd_name, cmd in _commands.items():
-        if cmd_name in args["cmd"]:
-            principal = args.pop("cmd").pop(cmd_name)
-            secundary = args
-            cmd(*principal, **secundary)
+        if cmd_name == cmd_line["cmd"]:
+            args = cmd_line["args"]
+            options = cmd_line["options"]
+            flags = cmd_line["flags"]
+            cmd(*args, options=options, flags=flags)
             break
         
 # --------------------------------------------------------------------
@@ -282,10 +283,18 @@ def config_cli() -> Cli:
     msg = """
     <app_name> changes the app of the servers
     """
-    app.add_option(
+    use = Command(
         "use", description=msg, 
         extra_arg=True, mandatory=True
     )
+    msg = """
+    <server_names> allows to specify the servers whose
+    app wants to be changed
+    """
+    use.add_option(
+        "--on", description=msg, 
+        extra_arg=True, mandatory=True, multi=True)
+    app.add_option_ascmd(use)
     # -------------
     msg = """
     <app_name> changes the default app of the servers
@@ -294,10 +303,6 @@ def config_cli() -> Cli:
         "setdef", description=msg, 
         extra_arg=True, mandatory=True
     )
-    pr = Command("hola")
-    pr.add_option("hola2")
-    pr.add_option("hola3")
-    app.add_cmd(pr)
 
     # -------------
     msg = """

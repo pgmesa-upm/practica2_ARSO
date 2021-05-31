@@ -4,7 +4,6 @@ import logging
 
 from program.controllers import containers
 from dependencies.register import register
-from dependencies.lxc import lxc
 from program.platform.machines import servers
 from dependencies.process import process
 from dependencies.utils.tools import concat_array
@@ -127,21 +126,31 @@ def use_app(app_name:str, *servs):
                 app_logger.error(msg)
                 return
             msg = (f" Actualizando app '{app_name}' " +
-                        "en servidores...")
+                   f"en servidores '{concat_array(servs)}'...")
             app_logger.info(msg)
             root_path = f"{apps_default_path}/{app_name}/ROOT"
         else:
             app_logger.info(msg)
             root_path = f"{apps_repo_path}/{app_name}/ROOT"
+        cs = register.load(containers.ID)
+        if cs is None:
+            app_logger.error(" No hay contenedores creados")
+            return
+        existing_servs = list(filter(lambda c: c.tag == servers.TAG, cs))
+        namesof_existing_servs = list(map(lambda s: s.name, existing_servs))
+        if len(existing_servs) == 0:
+            app_logger.error(" No hay servidores en funcionamiento")
+            return
         if len(servs) == 0:
-            cs = register.load(containers.ID)
-            if cs is None:
-                app_logger.error(" No hay contenedores creados")
-                return
-            servs = list(filter(lambda c: c.tag == servers.TAG, cs))
-            if len(servs) == 0:
-                app_logger.error(" No hay servidores en funcionamiento")
-                return
+            servs = existing_servs
+        else:
+            for s in servs: 
+                if s not in namesof_existing_servs:
+                    msg = f" No existe el servidor '{s}' en el programa"
+                    app_logger.error(msg)
+            servs = list(filter(
+                lambda s: s.name in servs, existing_servs
+            )) 
         for s in servs:
             servers.change_app(s, root_path, app_name)
     else:

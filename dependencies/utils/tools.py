@@ -32,6 +32,9 @@ def pretty(obj:object, *attr_colums, firstcolum_order:list=None) -> str:
         str: Tabla con los atributos del objeto
     """
     attr_dict = vars(obj)
+    # Pasamos a strings los valores del diccionario
+    for attr, attr_val in attr_dict.items(): 
+        attr_dict[attr] = str(attr_val)
     attr_colums = list(attr_colums)
     # Comprobamos que las tuplas que nos han pasado son correctas
     valid_colums = []

@@ -196,10 +196,13 @@ def add(num:int, options={}, flags=[], extra_cs=[]):
     existent_cs = register.load(containers.ID)
     if "-cl" in options:
         if existent_cs != None:
-            cl_list = list(filter(lambda cs: cs.tag == client.TAG, existent_cs))
+            cl_list = list(filter(
+                lambda cs: cs.tag == client.TAG, existent_cs
+            ))
             if len(cl_list) > 0:
-                msg = (f" La plataforma no admite mas de 1 contenedor cliente. " +
-                        f"Ya hay un cliente creado -> '{cl_list[0].name}'")
+                msg = (f" La plataforma no admite mas de 1 contenedor " +
+                        f"cliente. Ya hay un cliente creado -> " + 
+                        f"'{cl_list[0].name}'")
                 cmd_logger.error(msg)
                 return
         if num > 1:
@@ -208,9 +211,11 @@ def add(num:int, options={}, flags=[], extra_cs=[]):
             return
         climage = None
         if "--image" in options:
-            climage = options["--image"][0]
+            climage = options["--image"]["args"][0]
         if "--name" in options:
-            cl = client.get_client(name=options["--name"][0],image=climage)
+            cl = client.get_client(
+                name=options["--name"]["args"][0],image=climage
+            )
         else:
             cl = client.get_client(image=climage)
         cs = [cl]
@@ -227,12 +232,12 @@ def add(num:int, options={}, flags=[], extra_cs=[]):
         # Elegimos la imagen con la que se van a crear los servidores
         simage = None
         if "--image" in options:
-            simage = options["--image"][0]
+            simage = options["--image"]["args"][0]
         if "--simage" in options:
-            simage = options["--simage"][0]
+            simage = options["--simage"]["args"][0]
             
         if "--name" in options:   
-            names = options["--name"]
+            names = options["--name"]["args"]
             cs = extra_cs + servers.get_servers(
                 num, 
                 *names, 
@@ -299,27 +304,27 @@ def deploy(numServs:int, options={}, flags=[]):
     # Creando contenedores
     lbimage = None; climage = None; dbimage=None; extra = []
     if "--image" in options:
-        lbimage = options["--image"][0]
-        climage = options["--image"][0]
-        dbimage = options["--image"][0]
+        lbimage = options["--image"]["args"][0]
+        climage = options["--image"]["args"][0]
+        dbimage = options["--image"]["args"][0]
     # Configurmaos balanceador
     if "--lbimage" in options:
-        lbimage = options["--lbimage"][0]
+        lbimage = options["--lbimage"]["args"][0]
     if "--dbimage" in options:
-        dbimage = options["--dbimage"][0]
+        dbimage = options["--dbimage"]["args"][0]
     db = data_base.get_database(image=dbimage)
     extra.append(db)
     algorithm = None
     if "--balance" in options:
-        algorithm = options["--balance"][0]
+        algorithm = options["--balance"]["args"][0]
     lb = load_balancer.get_lb(image=lbimage, balance=algorithm)
     extra.append(lb)
     # Configurmaos clientes
     if "--client" in options:
         if "--climage" in options:
-            climage = options["--climage"][0]
+            climage = options["--climage"]["args"][0]
         try:
-            name = options["--client"][0]
+            name = options["--client"]["args"][0]
             cl = client.get_client(name=name, image=climage)
         except IndexError:
             cl = client.get_client(image=climage)        
@@ -389,29 +394,32 @@ def destroy(options={}, flags=[]):
 # --------------------------------------------------------------------   
 def change(options={}, flags={}):
     if "balance" in options:
-        algorithm = options["balance"][0]
+        algorithm = options["balance"]["args"][0]
         load_balancer.change_algorithm(algorithm)
 
 # --------------------------------------------------------------------       
 def app(options={}, flags={}):
     if "markservs" in options:
-        apps.mark_apps(*options["markservs"])
+        apps.mark_apps(*options["markservs"]["args"])
     elif "unmarkservs" in options:
-        apps.mark_apps(*options["unmarkservs"], undo=True)
+        apps.mark_apps(*options["unmarkservs"]["args"], undo=True)
     elif "add" in options:
-        apps.add_apps(*options["add"])
+        apps.add_apps(*options["add"]["args"])
     elif "use" in options:
-        apps.use_app(options["use"][0])
+        servs = []
+        if "--on" in options["use"]["options"]:
+            servs = options["use"]["options"]["--on"]["args"]
+        apps.use_app(options["use"]["args"][0], *servs)
         if "-m" in flags:
             apps.mark_apps()
     elif "setdef" in options:
-        apps.set_default(options["setdef"][0])
+        apps.set_default(options["setdef"]["args"][0])
     elif "unsetdef" in options:
         apps.unset_default()
     elif "list" in options:
         apps.list_apps()
     elif "rm" in options:
-        app_names = options["rm"]
+        app_names = options["rm"]["args"]
         if not "-f" in flags:
             default = apps.get_defaultapp()
             if default in app_names:

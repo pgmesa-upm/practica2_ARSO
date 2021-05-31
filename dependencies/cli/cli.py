@@ -70,42 +70,26 @@ class Cli:
                 parts = self._split_line(cmd, args)
                 # Vemos si cada parte es válida y la guardamos en 
                 # un diccionario
-                processed_line = {"cmd": {}, "options": {}, "flags": []}
+                processed_line = {"cmd": None, "args": [], "options": {}, "flags": []}
                 params = self._check_command(cmd, parts.pop(cmd.name))
-                processed_line["cmd"] = {cmd.name: params}
-                print(parts)
+                processed_line["cmd"] = cmd.name
+                processed_line["args"] = params
                 # Procesamos las opciones del comando principal y de cada
                 # opcion de forma recursiva
                 for opt_name in parts:
                     opt = cmd.options[opt_name]
                     options = self._process_options(opt, parts[opt_name])
-                    
                     processed_line["options"][opt_name] = options
-                print(processed_line)
-                return 
-                for cmd_name, params in parts.items():
-                    try:
-                        command = cmd.options[cmd_name]
-                        key = "options"
-                    except KeyError:
-                        command = cmd
-                        key = "cmd"
-                    checked_cmd = self._check_command(command, params)
-                    dict_page = {command.name: checked_cmd}
-                    processed_line[key].update(dict_page)
                 processed_line["flags"] = inFlags
                 return processed_line
         raise CmdLineError(f"El comando '{args[0]}' no se reconoce")
     
     def _process_options(self, opt:Command, args:list):
-        print(opt, args)
         parts = self._split_line(opt, [opt.name] + args)
-        processed_line = {"cmd": {}, "options": {}, "flags": []}
+        processed_line = {"args": [], "options": {}, "flags": []}
         params = self._check_command(opt, parts.pop(opt.name))
-        processed_line["cmd"] = {opt.name: params}
+        processed_line["args"] = params
         for opt_name in parts:
-            print(parts)
-            print(opt.name, opt.options)
             sub_opt = opt.options[opt_name]
             options = self._process_options(sub_opt, parts[opt_name])
             processed_line["options"][sub_opt.name] = options
@@ -117,13 +101,13 @@ class Cli:
         ant = args[0]; parts = {ant: ""}; last_index = 1
         for i, arg in enumerate(args):
             if arg in cmd.options:
-                # if ant != cmd.name and parts.get(ant, None) is not None:
-                #     msg = f"El comando '{ant}' esta repetido"
-                #     raise CmdLineError(msg)
+                if arg in parts or arg == ant:
+                    msg = f"El comando '{ant}' esta repetido"
+                    raise CmdLineError(msg)
                 parts[ant] = args[last_index:i]
                 last_index = i + 1
-                ant = arg
-        parts[ant] = args[last_index:]   
+                ant = arg       
+        parts[ant] = args[last_index:]
         # Comprobamos si puede haber mas de una opcion y si es
         # obligatorio que haya al menos una
         option_names = ""
@@ -235,7 +219,7 @@ class Cli:
         # ------------------ Parametros a modificar ------------------
         maxline_length = 100; cmd_indent = 4; opt_indent = 12
         cmd_first_line_diff = 10; opt_first_line_diff = 10
-        # ------------------------------------------------------------
+        # -------------------- FUNCIONES INTERNAS --------------------
         def apply_shellformat(string:str, indent:int=4):
             return format_str(
                 string, 
@@ -248,14 +232,30 @@ class Cli:
             index = string.find("\n")
             if index != -1:
                 untabbed += string[:index] + "\n"
-                #print(untabbed)
                 if index < len(string) -1:
                     rest = string[index+1:]
                     untabbed += apply_shellformat(rest, indent=indent)
             else:
                 untabbed = string
             return untabbed 
-        
+        def print_recursively(cmd:Command, i:int):
+            cmd_options = cmd.options.values()
+            if len(cmd_options) == 0: return
+            print(" "*8*(i+1)+"- options:")
+            for opt in cmd_options:
+                description = f"=> '{opt.name}' --> {opt.description}"
+                extra_indent = (opt_indent-cmd_indent)*i
+                formatted = apply_shellformat(
+                    description, 
+                    indent=opt_indent + extra_indent
+                )
+                formatted = untab_firstline(
+                    formatted, 
+                    indent=opt_indent+opt_first_line_diff + extra_indent
+                )
+                print(formatted)
+                print_recursively(opt, i+1) 
+        # ------------------------------------------------------------ 
         commands = self.commands.values()
         if command is not None:
             commands = [command]
@@ -271,17 +271,7 @@ class Cli:
                 formatted, indent=cmd_indent+cmd_first_line_diff
             )
             print(formatted)
-            if len(cmd.options) > 0:
-                print(f"        - options:")
-                for opt in cmd.options.values():
-                    description = f"=> '{opt.name}' --> {opt.description}"
-                    formatted = apply_shellformat(
-                        description, indent=opt_indent
-                    )
-                    formatted = untab_firstline(
-                        formatted, indent=opt_indent+opt_first_line_diff
-                    )
-                    print(formatted)
+            print_recursively(cmd, 0)
         print(" + Flags: ")   
         for flag in self.flags.values():
             description = f"    -> {flag.name} --> {flag.description}"

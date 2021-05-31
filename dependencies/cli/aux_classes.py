@@ -63,7 +63,7 @@ class Command:
             description=description
         )
     
-    def add_cmd(self, cmd):
+    def add_option_ascmd(self, cmd):
         self.options[cmd.name] = cmd
      
     def __str__(self) -> str:
