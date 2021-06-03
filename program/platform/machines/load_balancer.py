@@ -194,6 +194,7 @@ def update_haproxycfg():
     except lxc.LxcError as err:
         err_msg = f" Fallo al configurar el fichero haproxy: {err}" 
         lb_logger.error(err_msg)
+        return -1
     remove("haproxy.cfg")
     
 # --------------------------------------------------------------------
@@ -217,7 +218,13 @@ def change_algorithm(algorithm:str):
         return
     lb.algorithm = algorithm
     register.update(containers.ID, cs)
-    update_haproxycfg()
+    outcome = update_haproxycfg()
+    if outcome == -1:
+        msg = (" Fallo al cambiar el algoritmo de balanceo, se " + 
+                "utilizara el algoritmo por defecto")
+        lb_logger.error(msg)
+        lb.algorithm = default_algorithm
+        containers.update_containers(lb)
 # --------------------------------------------------------------------
     
     
