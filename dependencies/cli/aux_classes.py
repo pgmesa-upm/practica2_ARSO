@@ -45,7 +45,7 @@ class Command:
         self.multi_opt = multi_opt
         self.options = {}
    
-    def add_option(self, name:str, extra_arg:any=False, mandatory=False, 
+    def define_option(self, name:str, extra_arg:any=False, mandatory=False, 
                    multi=False, choices:list=None, default:any=None,
                    description:str=None):
         """Añade una opcion al comando. Una opcion es basicamente un 
@@ -63,8 +63,8 @@ class Command:
             description=description
         )
     
-    def add_option_ascmd(self, cmd):
-        self.options[cmd.name] = cmd
+    def add_option(self, opt):
+        self.options[opt.name] = opt
      
     def __str__(self) -> str:
         """Define como se va a representar el comando en forma
@@ -74,6 +74,12 @@ class Command:
             str: reperesentacion del objeto en forma string
         """
         return self.name 
+
+# Se crea esta clase simplemente para que al definir los comandos se poueda
+# distinguir a simple vista que va a ser una opcion y que un comando aunque 
+# en la practica son exactamente lo mismo
+class Option(Command):
+    pass
     
 # --------------------------------------------------------------------     
 class Flag:
