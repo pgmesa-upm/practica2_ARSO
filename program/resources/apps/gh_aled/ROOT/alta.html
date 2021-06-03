@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <title> Gestión Hospitalaria </title> 
+  <link rel="stylesheet" type="text.css" href="estilos.css">
+  <link rel="stylesheet" media="only screen and (max-width: 480px)" href="smartphone.css">
+  <script>
+	  function validar() {
+		  var numero, let, letras, formato;
+		  letras = 'TRWAGMYFPDXBNJZSQVHLCKET';  
+		  formato = /^\d{8}[a-zA-Z]$/;
+		  dni = document.forms["formulario"]["dni"].value;
+
+		  if(formato.test(dni)){
+		     numero = dni.substr(0, dni.length-1);
+		     let = dni.substr(dni.length-1, 1);
+		     numero = numero % 23;
+		     letras=letras.substring(numero, numero+1);
+		     if (letras!=let) {
+		       alert("Letra errónea");
+		       return false;
+		     }
+		     else
+		       return true;
+		  }
+		  else{
+		     alert("Formato erróneo");
+		     return false;
+		  }
+		}
+  </script>
+</head> 
+
+<body>
+  <header>
+  	<table>
+  		<tr>
+  			<td><img src="logo.png"></img></td>
+  			<td><h1>Gestión hospitalaria</h1></td> 
+  		</tr>
+  	</table>
+  </header>
+
+  <nav class="main" id="n1">
+    <a href="index.html">Inicio</a>
+    <a href="alta">Alta</a>
+    <a href="baja">Baja</a>
+    <a href="consulta">Consulta</a>
+  </nav>
+
+  <section class="main" id="s1">
+  	<h1>Alta</h1>
+  	<h2></h2>
+<!-- 	 <form name="formulario" action="alta" method="POST"> -->
+	 <form action="alta" method="POST">
+	  <table>
+	   <tr>
+	    <td>Nombre: </td>
+	    <td><input type="text" name="nombre"></td>
+	   </tr>
+	   <tr>
+	    <td>Apellidos: </td>
+	    <td><input type="text" name="apellidos"></td>
+	   </tr>
+	   <tr>
+	    <td>DNI: </td>
+	    <td><input type="text" name="dni"></td>
+	   </tr>
+	   <tr>
+	    <td><input type="submit" name="enviar" value="submit" onClick="return validar();"></td>
+	   </tr>
+	  </table>
+	 </form>
+  </section>
+
+  <footer class="main" id="f1">
+    <a href="https://moodle.lab.dit.upm.es/moodle/user/profile.php?id=50">José María del Álamo</a>
+    Enviar email a <a href="mailto:jmdela@dit.upm.es">jmdela@dit.upm.es</a>
+  </footer>
+</body> 
+</html>

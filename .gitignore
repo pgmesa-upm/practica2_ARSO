@@ -9,3 +9,5 @@ haproxy.cfg
 # Que solo se guarde en github la aplicacion por defecto
 program/resources/apps/*
 !program/resources/apps/default
+!program/resources/apps/gh_aled
+!program/resources/apps/gh_propia
