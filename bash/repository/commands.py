@@ -56,8 +56,8 @@ def start(*target_cs, options={}, flags=[]):
     if apps.get_defaultapp() is not None:
         servs = []
         for c in succesful_cs:
-            if c.tag == servers.TAG and c.app != apps.get_defaultapp():
-                servs.append(c)
+            if c.tag == servers.TAG and c.app is None:
+                servs.append(c.name)
         if len(servs) > 0:
             msg = " Cargando la aplicacion por defecto en servidores..."
             cmd_logger.info(msg) 
@@ -65,10 +65,10 @@ def start(*target_cs, options={}, flags=[]):
             cmd_logger.info(" Distribucion de la aplicacion finalizado\n")
     else:
         warn = (" No hay ninguna aplicacion asignada como default " +
-                "para introducir en los servidores\n")
+                "para desplegar en los servidores\n")
         cmd_logger.warning(warn)
     if "-m" in flags:
-        app(options={"markservs":[]})
+        app(options={"markservs":{"args":[], "options":{}, "flags":[]}})
         
 # --------------------------------------------------------------------
 @target_containers(cmd_logger) 
