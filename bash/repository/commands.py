@@ -459,3 +459,5 @@ def show(options={}, flags={}):
     elif "info" in options:
         platform.print_info()
 # --------------------------------------------------------------------
+def servs(options={}, flags={}):
+    pass

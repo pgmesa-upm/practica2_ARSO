@@ -1,0 +1,11 @@
+{
+    "material-icon-theme.folders.associations": {
+
+        "cli": "Pipe",
+        "register": "Dump",
+        "utils": "Tools",
+        "lxc_classes": "Class",
+        "vscode_config": "vscode"
+        
+    }
+}

@@ -30,18 +30,16 @@ def execute(cmd_line:dict):
         
 # --------------------------------------------------------------------
 def config_cli() -> Cli:
-    """Se definen todos los argumentos que podra recibir el programa 
-    (se asocia cada comando principal con una funcion y se almacena 
-    en commands) y se configura la command line interface (cli)
-
-    Returns:
-            Cli: Devuelve la cli configurada con los comandos del 
-                programa
-    """
-    global _commands
     cli = Cli()
-    # Arguments
-    # ++++++++++++++++++++++++++++
+    _def_platform_cmds(cli)
+    _def_server_cmds(cli)
+    _def_loadbalancer_cmds(cli)
+    _def_database_cmds(cli)
+    _def_client_cmds(cli)
+    return cli
+
+def _def_platform_cmds(cli:Cli):
+    global _commands
     cmd_name = "deploy"
     msg = """
     <void or integer between(1-5)> --> deploys a server platform with
@@ -161,13 +159,12 @@ def config_cli() -> Cli:
     destroy = Command(cmd_name, description=msg)
     cli.add_command(destroy)
     _commands[cmd_name] = commands_rep.destroy
-    
-    # ------ Other functionalities
+
     # ++++++++++++++++++++++++++++
     cmd_name = "pause"
     msg = """ 
     <void or container_names> pauses the containers currently 
-    running, if void all containers are stopped
+    running, if void all containers are paused
     """
     pause = Command(
         cmd_name, description=msg, 
@@ -175,7 +172,164 @@ def config_cli() -> Cli:
     )
     cli.add_command(pause)
     _commands[cmd_name] = commands_rep.pause
+    
+    # ++++++++++++++++++++++++++++
+    cmd_name = "show"
+    msg = """ 
+    shows information about the program
+    """
+    msg = ""
+    show = Command(
+        cmd_name, description=msg, 
+        mandatory_opt=True, multi_opt=False
+    )
+    # -------------
+    msg = """ 
+    shows information about every machine/component of the platform
+    """
+    show.add_option("state", description=msg)
+    # -------------
+    msg = """ 
+    displays a diagram that explains the structure of the platform
+    """
+    show.add_option("diagram", description=msg)
+    # -------------
+    msg = """ 
+    shows information about the external dependencies of the program
+    """
+    show.add_option("dep", description=msg)
+    # -------------
+    msg = """ 
+    shows important information about how the platform is built and 
+    deployed, and the requirements that the container images need to 
+    fulfill, in order to fit into the platform (in case an specific
+    image is passed to the program)
+    """
+    show.add_option("info", description=msg)
+    # -------------
+    cli.add_command(show)
+    _commands[cmd_name] = commands_rep.show
+    
+    # ++++++++++++++++++++++++++++
+    cmd_name = "term"
+    msg = """ 
+    <void or container_names> opens the terminal of the containers 
+    specified or all of them if no name is given
+    """
+    term = Command(
+        cmd_name, description=msg, 
+        extra_arg=True, multi=True
+    )
+    cli.add_command(term)
+    _commands[cmd_name] = commands_rep.term
+    
+    # ---------------------- Flags
+    # ++++++++++++++++++++++++++++
+    msg = """ 
+    'warning mode', only shows warning and error msgs during 
+    execution
+    """
+    verbosity = Flag(
+        "-w", description=msg,
+        notCompatibleWithFlags=["-d"]
+    )
+    cli.add_flag(verbosity)
+    # ++++++++++++++++++++++++++++
+    msg = """ 
+    option for debugging
+    """
+    debugging = Flag(
+        "-d", description=msg, 
+        notCompatibleWithFlags=["-w"]
+    )
+    cli.add_flag(debugging)
+    # ++++++++++++++++++++++++++++
+    msg = """ 
+    'quiet mode', doesn't show any msg during execution (only 
+    when an error occurs)
+    """
+    quiet = Flag(
+        "-q", description=msg, 
+        notCompatibleWithFlags=["-w","-d"],
+    )
+    cli.add_flag(quiet)
+    # ++++++++++++++++++++++++++++
+    msg = """ 
+    executes the action without asking confirmation
+    """
+    force = Flag("-f", description=msg)
+    cli.add_flag(force)
+    # ++++++++++++++++++++++++++++
+    msg = """ 
+    opens the terminal window of the containers that are being 
+    runned
+    """
+    terminal = Flag("-t", description=msg)
+    cli.add_flag(terminal)
+    # ++++++++++++++++++++++++++++
+    msg = """ 
+    launches the container
+    """
+    launch = Flag("-l", description=msg)
+    cli.add_flag(launch)
+    # ++++++++++++++++++++++++++++
+    msg = """ 
+    marks the servers if they are being runned
+    """
+    mark = Flag("-m", description=msg)
+    cli.add_flag(mark)
+    
+    return cli
 
+def _def_server_cmds(cli:Cli):
+    global _commands
+    cmd_name = "servs"
+    msg = """ 
+    allows to interact with the servers
+    """
+    servs = Command(
+        cmd_name, description=msg
+    )
+    msg = """ 
+    starts all the servers
+    """
+    run = Command(
+        "run", description=msg
+    )
+    
+    msg = """<server_names> skips the servers specified"""
+    run.add_option(
+        "--skip", description=msg,
+        extra_arg=True, mandatory=True, multi=True
+    )
+    servs.add_option_ascmd(run)
+    cli.add_command(servs)
+    _commands[cmd_name] = commands_rep.servs
+
+def _def_loadbalancer_cmds(cli:Cli):
+    pass
+
+def _def_client_cmds(cli:Cli):
+    pass
+
+def _def_database_cmds(cli:Cli):
+    pass
+
+def _config_cli() -> Cli:
+    """Se definen todos los argumentos que podra recibir el programa 
+    (se asocia cada comando principal con una funcion y se almacena 
+    en commands) y se configura la command line interface (cli)
+
+    Returns:
+            Cli: Devuelve la cli configurada con los comandos del 
+                programa
+    """
+    global _commands
+    cli = Cli()
+    # Arguments
+    # ++++++++++++++++++++++++++++
+    
+    
     # ++++++++++++++++++++++++++++
     cmd_name = "add"
     msg = """ 
@@ -193,7 +347,8 @@ def config_cli() -> Cli:
     """
     add.add_option(
         "--name", description=msg, 
-        extra_arg=True, multi=True, mandatory=True)
+        extra_arg=True, multi=True, mandatory=True
+    )
     # -------------
     msg = """ 
     adds clients instead of servers
@@ -331,111 +486,5 @@ def config_cli() -> Cli:
     cli.add_command(app)
     _commands[cmd_name] = commands_rep.app
     
-    # ++++++++++++++++++++++++++++
-    cmd_name = "show"
-    msg = """ 
-    shows information about the program
-    """
-    msg = ""
-    show = Command(
-        cmd_name, description=msg, 
-        mandatory_opt=True, multi_opt=False
-    )
-    # -------------
-    msg = """ 
-    shows information about every machine/component of the platform
-    """
-    show.add_option("state", description=msg)
-    # -------------
-    msg = """ 
-    displays a diagram that explains the structure of the platform
-    """
-    show.add_option("diagram", description=msg)
-    # -------------
-    msg = """ 
-    shows information about the external dependencies of the program
-    """
-    show.add_option("dep", description=msg)
-    # -------------
-    msg = """ 
-    shows important information about how the platform is built and 
-    deployed, and the requirements that the container images need to 
-    fulfill, in order to fit into the platform (in case an specific
-    image is passed to the program)
-    """
-    show.add_option("info", description=msg)
-    # -------------
-    cli.add_command(show)
-    _commands[cmd_name] = commands_rep.show
     
-    # ++++++++++++++++++++++++++++
-    cmd_name = "term"
-    msg = """ 
-    <void or container_names> opens the terminal of the containers 
-    specified or all of them if no name is given
-    """
-    term = Command(
-        cmd_name, description=msg, 
-        extra_arg=True, multi=True
-    )
-    cli.add_command(term)
-    _commands[cmd_name] = commands_rep.term
-    
-    # ---------------------- Flags
-    # ++++++++++++++++++++++++++++
-    msg = """ 
-    'warning mode', only shows warning and error msgs during 
-    execution
-    """
-    verbosity = Flag(
-        "-w", description=msg,
-        notCompatibleWithFlags=["-d"]
-    )
-    cli.add_flag(verbosity)
-    # ++++++++++++++++++++++++++++
-    msg = """ 
-    option for debugging
-    """
-    debugging = Flag(
-        "-d", description=msg, 
-        notCompatibleWithFlags=["-w"]
-    )
-    cli.add_flag(debugging)
-    # ++++++++++++++++++++++++++++
-    msg = """ 
-    'quiet mode', doesn't show any msg during execution (only 
-    when an error occurs)
-    """
-    quiet = Flag(
-        "-q", description=msg, 
-        notCompatibleWithFlags=["-w","-d"],
-    )
-    cli.add_flag(quiet)
-    # ++++++++++++++++++++++++++++
-    msg = """ 
-    executes the action without asking confirmation
-    """
-    force = Flag("-f", description=msg)
-    cli.add_flag(force)
-    # ++++++++++++++++++++++++++++
-    msg = """ 
-    opens the terminal window of the containers that are being 
-    runned
-    """
-    terminal = Flag("-t", description=msg)
-    cli.add_flag(terminal)
-    # ++++++++++++++++++++++++++++
-    msg = """ 
-    launches the container
-    """
-    launch = Flag("-l", description=msg)
-    cli.add_flag(launch)
-    # ++++++++++++++++++++++++++++
-    msg = """ 
-    marks the servers if they are being runned
-    """
-    mark = Flag("-m", description=msg)
-    cli.add_flag(mark)
-    
-    return cli
 # --------------------------------------------------------------------
