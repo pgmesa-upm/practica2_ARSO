@@ -25,6 +25,11 @@ def is_deployed():
         return False
     return True
 
+def have_containers():
+    if register.load(containers.ID) is None:
+        return False
+    return True
+
 # --------------------------------------------------------------------
 def update_conexions():
     """ Se encarga de conectar los contenedores con los bridge. Mira 
@@ -41,14 +46,14 @@ def update_conexions():
         net_devices.update_conexions()
     # Miramos si hay contenedores en el programa (si no hay, ni si
     # quiera el lb, es que los han eliminado desde fuera)
-    cs = register.load(containers.ID)
-    if cs == None: 
+    if not have_containers(): 
         register.update("updates", {})
         return
     # Actualizamos los servidores conectados al balanceador de carga
     if updates.get("s_state", False):
         load_balancer.update_haproxycfg()
     # Realizamos las conexiones de los contenedores a los bridge
+    cs = register.load(containers.ID)
     bgs = register.load(bridges.ID)
     bgs_dict = objectlist_as_dict(
         bgs,
