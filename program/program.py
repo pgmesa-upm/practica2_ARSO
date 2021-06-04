@@ -93,6 +93,8 @@ def list_lxc_containers():
             if t >= tf:
                 timeout = True
         lxc.lxc_list(print_=True)
+    else:
+        lxc.lxc_list(print_=True)
 
 def list_lxc_bridges():
     lxc.lxc_network_list(print_=True)

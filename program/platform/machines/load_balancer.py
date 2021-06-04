@@ -1,6 +1,7 @@
 
 import logging
 from os import remove
+from pickle import FALSE
 from dependencies import lxc
 
 from program.controllers import containers
@@ -25,7 +26,8 @@ default_algorithm = "roundrobin"
 # Puerto en el que se va a ejecutar para aceptar conexiones de clientes
 PORT = 80
 # --------------------------------------------------------------------
-def get_lb(image:str=None, balance=None) -> Container:
+def create_lb(image:str=None, 
+                        balance=None, start=False) -> Container:
     """Devuelve el objeto del LB configurado
 
     Args:
@@ -39,110 +41,75 @@ def get_lb(image:str=None, balance=None) -> Container:
     """
     # Comprobamos que si hace falta configurar una imagen base para
     # el balanceador o ya se ha creado antes y esta disponible
-    if image is None:
-        if platform.is_imageconfig_needed(IMG_ID):
-            image = _config_image()
-        else:
-            image_saved = register.load(IMG_ID)
-            alias = image_saved["alias"]
-            image = alias
-            if alias == "": image = image_saved["fingerprint"]
+    j = 1; name = "lb"
+    while name in lxc.lxc_list():
+        name = f"lb{j}"
+        j += 1
     if balance is None:
         balance = default_algorithm
     # Creamos el objeto del balanceador
     msg = (f" Creando balanceador con imagen '{image}' " + 
            f"y algoritmo de balanceo '{balance}'")
     lb_logger.debug(msg)
-    name = "lb"
-    j = 1
-    while name in lxc.lxc_list():
-        name = f"lb{j}"
-        j += 1
     lb = Container(name, image, tag=TAG)
-    lb.add_to_network("eth0", with_ip="10.0.0.10")
-    lb.add_to_network("eth1", with_ip="10.0.1.10")
     setattr(lb, "port", PORT)
     setattr(lb, "algorithm", balance)
-    return lb
+    if image is None:
+        lb.base_image = platform.default_image
+        outcome = _config_loadbalancer(lb, start=start)
+        if outcome == -1:
+            return
+    lb.add_to_network("eth0", with_ip="10.0.0.10")
+    lb.add_to_network("eth1", with_ip="10.0.1.10")
+    containers.update_cs_and_notify(lb)
 
+def get_lb():
+    cs = register.load(containers.ID)
+    if cs != None:
+        for c in cs:
+            if c.tag == TAG:
+                return c
+    return None
+    
 # --------------------------------------------------------------------
-def _config_image() -> str:
+def _config_loadbalancer(lb:Container, start=False) -> str:
     """Crea una imagen para el balanceador de carga completamente
     configurada y funcional a partir de la default_image
 
     Returns:
         str: alias de la imagen creada
     """
-    lb_logger.info(" Creando la imagen base del balanceador...")
-    # Vemos que no haya un contenedor con ese nombre ya
-    name = "lbconfig"
-    j = 1
-    while name in lxc.lxc_list():
-        name = f"lbconfig{j}"
-        j += 1
-    msg = f" Contenedor usado para crear la imagen del lb -> '{name}'"
-    lb_logger.debug(msg)
-    lb_c = Container(name, platform.default_image, tag=TAG)
+    lb_logger.info(" Configurando balanceador de carga...")
     # Lanzamos el contenedor e instalamos modulos
-    lb_logger.info(f" Lanzando '{name}'...")
-    lb_c.init(); lb_c.start()
+    lb_logger.info(f" Lanzando '{lb}'...")
+    lb.init(); lb.start()
     lb_logger.info(" Instalando haproxy (puede tardar)...")
     try:
-        lb_c.update_apt()
-        lb_c.install("haproxy")
-        lb_c.execute(["service","haproxy","start"])
+        lb.update_apt()
+        lb.install("haproxy")
+        lb.execute(["service","haproxy","start"])
     except lxc.LxcError as err:
         err_msg = (" Fallo al instalar haproxy, " + 
                             "error de lxc: " + str(err))
         lb_logger.error(err_msg)
-        return platform.default_image
+        lb_logger.error(f" Eliminando '{lb}'")
+        lb.stop(); lb.delete()
+        return -1
     # Configuramos el netfile
-    lb_c.add_to_network("eth0")
-    lb_c.add_to_network("eth1")
-    containers.configure_netfile(lb_c)
+    lb.add_to_network("eth0")
+    lb.add_to_network("eth1")
+    containers.configure_netfile(lb)
     # Configurmaos el haproxy file
-    setattr(lb_c, "port", PORT)
-    setattr(lb_c, "algorithm", default_algorithm)
-    register.add(containers.ID, [lb_c])
-    update_haproxycfg()
-    register.remove(containers.ID)
-    # Vemos que no existe una imagen con el alias que vamos a usar
-    alias = "haproxy_lb"
-    k = 1
-    images = lxc.lxc_image_list()
-    aliases = list(map(lambda f: images[f]["ALIAS"], images))  
-    while alias in aliases:
-        alias = f"haproxy_lb{k}"
-        k += 1
-    # Una vez el alias es valido publicamos la imagen
-    msg = f" Publicando la imagen del lb con alias '{alias}'..."
-    lb_logger.info(msg)
-    lb_c.stop(); lb_c.publish(alias=alias)
-    lb_logger.info(" Imagen base del balanceador creada\n")
-    # Eliminamos el contenedor
-    lb_c.delete()
-    # Guardamos la imagen en el registro y la devolvemos
-    images = lxc.lxc_image_list()
-    fingerprint = ""
-    for f, info in images.items():
-        if info["ALIAS"] == alias:
-            fingerprint = f
-    image_info = {"alias": alias, "fingerprint": fingerprint}
-    register.add(IMG_ID, image_info)
-    return alias
+    containers.update_containers(lb)
+    update_haproxycfg(lb=lb)
+    # Detenemos el contenedor
+    if not start:
+        lb.stop()
+    lb_logger.info(" Balanceador de carga configurado\n")
 
 # --------------------------------------------------------------------
-def update_haproxycfg():
-    # Miramos si existen contenedores creados
-    cs = register.load(containers.ID)
-    if cs is None: return
-    # Si se ha borrado el balanceador desde fuera del programa o no
-    # se encuentra arrancado para actualizar salimos
-    lb = None
-    for c in cs:
-        if c.tag == TAG:
-            lb = c
-            break
+def update_haproxycfg(lb:Container=None):
+    lb = get_lb()
     if lb is None: return
     # Miramos si el lb esta arrancado para actualizar (si no lo 
     # haremos la proxima vez que arranque) y si lo esta esperamos
@@ -163,10 +130,14 @@ def update_haproxycfg():
          "backend webservers\n" +
         f"        balance {lb.algorithm}\n"
     )
-    servs = list(filter(
-        lambda c: c.tag == servers.TAG and c.state == "RUNNING",
-        cs
-    ))
+    cs = register.load(containers.ID)
+    if cs is None:
+        servs = []
+    else:
+        servs = list(filter(
+            lambda c: c.tag == servers.TAG and c.state == "RUNNING",
+            cs
+        ))
     for i, s in enumerate(servs):
         l = f"        server webserver{i+1} {s.name}:{s.port}\n"
         config += l

@@ -115,15 +115,15 @@ def print_state():
             ("networks", "connected_networks"),
         ]
         attrs_order = [
-            "name", "state", "networks", "container_image", "marked"
+            "name", "state", "networks", "base_image", "marked"
         ]
         for c in cs:
             extra_pairs = []
             if c.tag == servers.TAG:
-                extra_pairs = [("container_image", "app")]
+                extra_pairs = [("base_image", "app")]
                 c.port = None
             elif c.tag == load_balancer.TAG:
-                extra_pairs = [("container_image", "algorithm")]
+                extra_pairs = [("base_image", "algorithm")]
             print(pretty(
                 c, *(pairs+extra_pairs), firstcolum_order=attrs_order
             ))
