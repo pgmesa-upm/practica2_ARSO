@@ -281,8 +281,6 @@ def _def_platform_cmds(cli:Cli):
     """
     mark = Flag("-m", description=msg)
     cli.add_flag(mark)
-    
-    return cli
 
 def _def_server_cmds(cli:Cli):
     global _commands
@@ -327,7 +325,9 @@ def _def_server_cmds(cli:Cli):
         "pause", description=msg,
         extra_arg=True, multi=True
     )
+    # -------------
     pause.add_option(_reused_opts["--skip"])
+    # -------------
     servs.add_option(pause)
     
     # ++++++++++++++++++++++++++++
@@ -338,14 +338,20 @@ def _def_server_cmds(cli:Cli):
         "add", description=msg,
         extra_arg=True, default=1, choices=[1,2,3,4,5]
     )
+    # -------------
     add.define_option(
         "--name", description="allows to specify the names",
         extra_arg=True, mandatory=True, multi=True
     )
+    # -------------
+    add.define_option(
+        "--image", description="allows to specify the image",
+        extra_arg=True, mandatory=True, multi=True
+    )
+    # -------------
     servs.add_option(add)
     # ++++++++++++++++++++++++++++
-    msg = """
-    <server_names> deletes the servers specified"""
+    msg = """<server_names> deletes the servers specified"""
     remove = Command(
         "rm", description=msg,
         extra_arg=True, mandatory=True, multi=True
@@ -353,13 +359,19 @@ def _def_server_cmds(cli:Cli):
     servs.add_option(remove)
     
     # ++++++++++++++++++++++++++++
-    
+    apps = _def_apps_cmd()
+    servs.add_option(apps)
+    # -------------
+    # -------------
+    cli.add_command(servs)
+    _commands[cmd_name] = commands_rep.servs
+
+def _def_apps_cmd():
+    msg = """allows to interect with the apps of the servers"""
     apps = Command(
         "apps", description=msg
     )
-    
-    cli.add_command(servs)
-    _commands[cmd_name] = commands_rep.servs
+    return apps
 
 def _def_loadbalancer_cmds(cli:Cli):
     pass
