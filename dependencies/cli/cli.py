@@ -263,7 +263,7 @@ class Cli:
                                     "[options] <parameters> [flags]")
         print(" + Commands: ")
         for cmd in commands:
-            description = f"    -> {cmd.name} --> {cmd.description}"
+            description = f"    -> '{cmd.name}' --> {cmd.description}"
             formatted = apply_shellformat(
                 description, indent=cmd_indent
             )
@@ -274,7 +274,7 @@ class Cli:
             print_recursively(cmd, 0)
         print(" + Flags: ")   
         for flag in self.flags.values():
-            description = f"    -> {flag.name} --> {flag.description}"
+            description = f"    -> '{flag.name}' --> {flag.description}"
             formatted = apply_shellformat(
                 description, indent=cmd_indent
             )

@@ -1,7 +1,12 @@
 
-import bash.repository.commands as commands_rep
 from dependencies.cli.cli import Cli, CmdLineError
 from dependencies.cli.aux_classes import Command, Flag, Option
+
+from .cmd_definitions.deploy_cmd.deploy import get_deploy_cmd
+from .cmd_definitions.servs_cmd.servs import get_servs_cmd
+from .cmd_definitions.repo_cmd.repo import get_repo_cmd
+from .cmd_definitions.reused_definitions import def_reused_definitions
+from .cmd_functions import commands as commands_rep
 
 # --------------------------- BASH HANDLER ---------------------------
 # --------------------------------------------------------------------
@@ -33,100 +38,27 @@ def execute(cmd_line:dict):
 # --------------------------------------------------------------------
 def config_cli() -> Cli:
     cli = Cli()
-    _def_reused_options()
-    _def_platform_cmds(cli)
-    _def_server_cmds(cli)
-    _def_loadbalancer_cmds(cli)
-    _def_database_cmds(cli)
-    _def_client_cmds(cli)
+    def_reused_definitions()
+    # ++++++++++++++++++++++++++++
+    deploy = get_deploy_cmd()
+    cli.add_command(deploy)
+    _commands[deploy.name] = commands_rep.deploy
+    # ++++++++++++++++++++++++++++
+    servs = get_servs_cmd()
+    cli.add_command(servs)
+    _commands[servs.name] = commands_rep.servs
+     # ++++++++++++++++++++++++++++
+    repo = get_repo_cmd()
+    cli.add_command(repo)
+    # _commands[servs.name] = commands_rep.servs
+     # ++++++++++++++++++++++++++++
+    # _def_loadbalancer_cmds(cli)
+    # _def_database_cmds(cli)
+    # _def_client_cmds(cli)
     return cli
 
 def _def_platform_cmds(cli:Cli):
     global _commands
-    cmd_name = "deploy"
-    msg = """
-    <void or integer between(1-5)> --> deploys a server platform with
-    the number of servers especified (if void, 2 servers are created).
-    It also initializes a load balancer that acts as a bridge between 
-    the servers and a data base for storing data. Everything is 
-    connected by 2 virtual bridges
-    """
-    deploy = Command(
-        cmd_name, description=msg, 
-        extra_arg=True, choices=[1,2,3,4,5], default=2
-    )
-    # -------------
-    msg = """ 
-    <server_names> allows to specify the name of the servers,
-    by default 's_' is given to each server
-    """
-    deploy.define_option(
-        "--name", description=msg, 
-        extra_arg=True, multi=True, mandatory=True
-    )
-    # -------------
-    msg = msg = """ 
-    <void or client_name> creates a client connected to the load 
-    balancer
-    """
-    deploy.define_option("--client", description=msg, extra_arg=True)
-    # -------------
-    msg = """ 
-    <alias or fingerprint> allows to specify the image of the
-    containers, by default ubuntu:18.04 is used
-    """
-    deploy.define_option(
-        "--image", description=msg, 
-        extra_arg=True, mandatory=True
-    )
-    # -------------
-    msg = """ 
-    <alias or fingerprint> allows to specify the image of the 
-    servers
-    """
-    deploy.define_option(
-        "--simage", description=msg, 
-        extra_arg=True, mandatory=True
-    )
-    # -------------
-    msg = """ 
-    <alias or fingerprint> allows to specify the image of the 
-    load balancer
-    """
-    deploy.define_option(
-        "--lbimage", description=msg, 
-        extra_arg=True, mandatory=True
-    )
-    # -------------
-    msg = """ 
-    <alias or fingerprint> allows to specify the image of the 
-    client
-    """
-    deploy.define_option(
-        "--climage", description=msg, 
-        extra_arg=True, mandatory=True
-    )
-    # -------------
-    msg = """ 
-    <alias or fingerprint> allows to specify the image of the 
-    data base
-    """
-    deploy.define_option(
-        "--dbimage", description=msg, 
-        extra_arg=True, mandatory=True
-    )
-    # -------------
-    msg = """ 
-    allows to specify the balance algorithm of the load balancer,
-    by default it uses 'roundrobin'
-    """
-    deploy.define_option(
-        "--balance", description=msg, 
-        extra_arg=True, mandatory=True
-    )
-    # -------------
-    cli.add_command(deploy)
-    _commands[cmd_name] = commands_rep.deploy
     
     # ++++++++++++++++++++++++++++
     cmd_name = "start"
@@ -282,96 +214,8 @@ def _def_platform_cmds(cli:Cli):
     mark = Flag("-m", description=msg)
     cli.add_flag(mark)
 
-def _def_server_cmds(cli:Cli):
-    global _commands
-    
-    msg = """allows to interact with the servers"""
-    cmd_name = "servs"
-    servs = Command(
-        cmd_name, description=msg,
-        mandatory_opt=True
-    )
-    # ++++++++++++++++++++++++++++
-    # ++++++++++++++++++++++++++++
-    msg = """
-    <void or server_name> starts the servers specified.
-    If void, all of them
-    """
-    run = Command(
-        "run", description=msg, 
-        extra_arg=True, multi=True
-    )
-    run.add_option(_reused_opts["--skip"])
-    servs.add_option(run)
-    
-    # ++++++++++++++++++++++++++++
-    msg = """
-    <void or server_name> stops the servers specified.
-    If void, all of them
-    """
-    stop = Command(
-        "stop", description=msg,
-        extra_arg=True, multi=True
-    )
-    stop.add_option(_reused_opts["--skip"])
-    servs.add_option(stop)
-    
-    # ++++++++++++++++++++++++++++
-    msg = """
-    <void or server_name> pauses the servers specified.
-    If void, all of them
-    """
-    pause = Command(
-        "pause", description=msg,
-        extra_arg=True, multi=True
-    )
-    # -------------
-    pause.add_option(_reused_opts["--skip"])
-    # -------------
-    servs.add_option(pause)
-    
-    # ++++++++++++++++++++++++++++
-    msg = """
-    <void or number> creates the number of servers specified.
-    If void, one is created"""
-    add = Command(
-        "add", description=msg,
-        extra_arg=True, default=1, choices=[1,2,3,4,5]
-    )
-    # -------------
-    add.define_option(
-        "--name", description="allows to specify the names",
-        extra_arg=True, mandatory=True, multi=True
-    )
-    # -------------
-    add.define_option(
-        "--image", description="allows to specify the image",
-        extra_arg=True, mandatory=True, multi=True
-    )
-    # -------------
-    servs.add_option(add)
-    # ++++++++++++++++++++++++++++
-    msg = """<server_names> deletes the servers specified"""
-    remove = Command(
-        "rm", description=msg,
-        extra_arg=True, mandatory=True, multi=True
-    )
-    servs.add_option(remove)
-    
-    # ++++++++++++++++++++++++++++
-    apps = _def_apps_cmd()
-    servs.add_option(apps)
-    # -------------
-    # -------------
-    cli.add_command(servs)
-    _commands[cmd_name] = commands_rep.servs
 
-def _def_apps_cmd():
-    msg = """allows to interect with the apps of the servers"""
-    apps = Command(
-        "apps", description=msg
-    )
-    return apps
+
 
 def _def_loadbalancer_cmds(cli:Cli):
     pass
@@ -382,14 +226,8 @@ def _def_client_cmds(cli:Cli):
 def _def_database_cmds(cli:Cli):
     pass
 
-def _def_reused_options():
-    global _reused_opts
-    msg = """<names> skips the containers specified"""
-    skip = Option(
-        "--skip", description=msg,
-        extra_arg=True, mandatory=True, multi=True
-    )
-    _reused_opts["--skip"] = skip
+
+    # -------------
 
 def _config_cli() -> Cli:
     """Se definen todos los argumentos que podra recibir el programa 
@@ -478,88 +316,8 @@ def _config_cli() -> Cli:
     _commands[cmd_name] = commands_rep.change
     
     # ++++++++++++++++++++++++++++
-    cmd_name = "app"
-    msg = """
-    allows to change some features of the servers application
-    """
-    app = Command(
-        cmd_name, description=msg, 
-        mandatory_opt=True, multi_opt=False
-    )
+    
     # -------------
-    msg = """
-    mark the app index.html of each server to distinguish them
-    """
-    app.define_option(
-        "markservs", description=msg,
-        extra_arg=True, multi=True
-    )
-    # -------------
-    msg = """
-    unmark the app index.html of the servers
-    """
-    app.define_option(
-        "unmarkservs", description=msg,
-        extra_arg=True, multi=True
-    )
-    # -------------
-    msg = """
-    <absolute path> adds an app to the repository
-    """
-    app.define_option(
-        "add", description=msg, 
-        extra_arg=True, mandatory=True, multi=True
-    )
-    # -------------
-    msg = """
-    <app_name> changes the app of the servers
-    """
-    use = Command(
-        "use", description=msg, 
-        extra_arg=True, mandatory=True
-    )
-    msg = """
-    <server_names> allows to specify the servers whose
-    app wants to be changed
-    """
-    use.define_option(
-        "--on", description=msg, 
-        extra_arg=True, mandatory=True, multi=True)
-    app.add_option(use)
-    # -------------
-    msg = """
-    <app_name> changes the default app of the servers
-    """
-    app.define_option(
-        "setdef", description=msg, 
-        extra_arg=True, mandatory=True
-    )
-
-    # -------------
-    msg = """
-    makes the default app to be none
-    """
-    app.define_option("unsetdef", description=msg)
-    # -------------
-    msg = """
-    <app_name> removes an app from the local repository
-    """
-    app.define_option(
-        "rm", description=msg, 
-        extra_arg=True, mandatory=True, multi=True
-    )
-    # -------------
-    msg = """
-    lists the apps of repository
-    """
-    app.define_option("list", description=msg)
-    # -------------
-    msg = """
-    clears the apps repository
-    """
-    app.define_option("emptyrep", description=msg)
-    # -------------
-    cli.add_command(app)
     _commands[cmd_name] = commands_rep.app
     
     
