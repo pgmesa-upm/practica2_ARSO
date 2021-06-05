@@ -122,7 +122,6 @@ class Container:
     
     def update_apt(self):
         self.execute(["apt-get","update"])
-        # self.execute(["apt", "upgrade", "-y"])
     
     def install(self, module:str):
         self.execute(["apt-get","install","-y",module])
