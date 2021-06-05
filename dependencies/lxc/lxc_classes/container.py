@@ -100,8 +100,8 @@ class Container:
         except LxcError as err:
             out = str(err)
         state = out.strip()
-        risky_cond = state == "starting"
-        if state == "running" or state == "degraded" or risky_cond:
+        # risky_cond = state == "starting"
+        if state == "running" or state == "degraded":
             self.started_up = True
             return
         self.started_up = False
