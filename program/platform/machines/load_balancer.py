@@ -26,8 +26,7 @@ default_algorithm = "roundrobin"
 # Puerto en el que se va a ejecutar para aceptar conexiones de clientes
 PORT = 80
 # --------------------------------------------------------------------
-def create_lb(image:str=None, 
-                        balance=None, start=False) -> Container:
+def create_lb(image:str=None, balance=None) -> Container:
     """Devuelve el objeto del LB configurado
 
     Args:
@@ -52,16 +51,17 @@ def create_lb(image:str=None,
            f"y algoritmo de balanceo '{balance}'")
     lb_logger.debug(msg)
     lb = Container(name, image, tag=TAG)
+    lb.add_to_network("eth0", with_ip="10.0.0.10")
+    lb.add_to_network("eth1", with_ip="10.0.1.10")
     setattr(lb, "port", PORT)
     setattr(lb, "algorithm", balance)
     if image is None:
         lb.base_image = platform.default_image
-        outcome = _config_loadbalancer(lb, start=start)
-        if outcome == -1:
-            return
-    lb.add_to_network("eth0", with_ip="10.0.0.10")
-    lb.add_to_network("eth1", with_ip="10.0.1.10")
-    containers.update_cs_and_notify(lb)
+        _config_loadbalancer(lb)
+    else:
+        successful = containers.init(lb)
+        if len(successful) == 0: lb = None
+    return lb
 
 def get_lb():
     cs = register.load(containers.ID)
@@ -72,7 +72,7 @@ def get_lb():
     return None
     
 # --------------------------------------------------------------------
-def _config_loadbalancer(lb:Container, start=False) -> str:
+def _config_loadbalancer(lb:Container):
     """Crea una imagen para el balanceador de carga completamente
     configurada y funcional a partir de la default_image
 
@@ -81,8 +81,9 @@ def _config_loadbalancer(lb:Container, start=False) -> str:
     """
     lb_logger.info(" Configurando balanceador de carga...")
     # Lanzamos el contenedor e instalamos modulos
-    lb_logger.info(f" Lanzando '{lb}'...")
-    lb.init(); lb.start()
+    containers.init(lb); containers.start(lb)
+    # Configuramos el netfile
+    containers.configure_netfile(lb)
     lb_logger.info(" Instalando haproxy (puede tardar)...")
     try:
         lb.update_apt()
@@ -92,23 +93,18 @@ def _config_loadbalancer(lb:Container, start=False) -> str:
         err_msg = (" Fallo al instalar haproxy, " + 
                             "error de lxc: " + str(err))
         lb_logger.error(err_msg)
-        lb_logger.error(f" Eliminando '{lb}'")
-        lb.stop(); lb.delete()
-        return -1
-    # Configuramos el netfile
-    lb.add_to_network("eth0")
-    lb.add_to_network("eth1")
-    containers.configure_netfile(lb)
-    # Configurmaos el haproxy file
-    containers.update_containers(lb)
-    update_haproxycfg(lb=lb)
-    # Detenemos el contenedor
-    if not start:
-        lb.stop()
-    lb_logger.info(" Balanceador de carga configurado\n")
+        setattr(lb, "config_error", True)
+        containers.stop(lb)
+    else:
+        # Configurmaos el haproxy file
+        update_haproxycfg()
+        containers.stop(lb)
+        msg = " Balanceador de carga configurado con exito\n"
+        lb_logger.info(msg)
+    containers.update_cs_without_notify(lb) 
 
 # --------------------------------------------------------------------
-def update_haproxycfg(lb:Container=None):
+def update_haproxycfg():
     lb = get_lb()
     if lb is None: return
     # Miramos si el lb esta arrancado para actualizar (si no lo 
@@ -166,7 +162,7 @@ def update_haproxycfg(lb:Container=None):
         err_msg = f" Fallo al configurar el fichero haproxy: {err}" 
         lb_logger.error(err_msg)
         lb.algorithm = default_algorithm
-        containers.update_containers(lb)
+        containers.update_cs_without_notify(lb)
         return -1
     remove("haproxy.cfg")
     

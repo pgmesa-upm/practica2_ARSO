@@ -17,7 +17,7 @@ cl_logger = logging.getLogger(__name__)
 # Tag e id de registro para la imagen configurada
 TAG = "client"
 # --------------------------------------------------------------------
-def create_client(name, image:str=None, start=False) -> Container:
+def create_client(name, image:str=None) -> Container:
     # Comprobamos que si hace falta configurar una imagen base para
     # el cliente o ya nos han pasado una o se ha creado antes 
     # y esta disponible
@@ -31,12 +31,14 @@ def create_client(name, image:str=None, start=False) -> Container:
         j += 1
     # Creamos los objetos de lo cliente
     cl = Container(name, image, tag=TAG)
+    cl.add_to_network("eth0", with_ip="10.0.1.2")
     if image is None:
         cl.base_image = platform.default_image
-        outcome = _config_client(cl, start=start)
-        if outcome == -1: return
-    cl.add_to_network("eth0", with_ip="10.0.1.2")
-    containers.update_cs_and_notify(cl)
+        _config_client(cl)
+    else:
+        successful = containers.init(cl)
+        if len(successful) == 0: cl = None
+    return cl
 
 def get_client():
     cs = register.load(containers.ID)
@@ -47,11 +49,10 @@ def get_client():
     return None
 
 # --------------------------------------------------------------------
-def _config_client(cl:Container, start=False) -> str:
+def _config_client(cl:Container):
     cl_logger.info(" Configurando cliente...")
     # Lanzamos el contenedor e instalamos modulos
-    cl_logger.info(f" Lanzando '{cl}'...")
-    cl.init(); cl.start()
+    containers.init(cl); containers.start(cl)
     cl_logger.info(" Instalando lynx (puede tardar)...")
     try:
         cl.update_apt()
@@ -61,12 +62,11 @@ def _config_client(cl:Container, start=False) -> str:
         err_msg = (" Fallo al instalar lynx, " + 
                             "error de lxc: " + str(err))
         cl_logger.error(err_msg)
-        cl_logger.error(f" Eliminando '{cl}'")
-        cl.stop(); cl.delete()
-        return -1
-    # Paramos el contenedor
-    if not start:
-        cl.stop()
-    cl_logger.info(" Cliente configurado\n")
+        setattr(cl, "config_error", True)
+        containers.stop(cl)
+    else:
+        containers.stop(cl)
+        cl_logger.info(" Cliente configurado con exito\n")
+    containers.update_cs_without_notify(cl)
 
 # --------------------------------------------------------------------

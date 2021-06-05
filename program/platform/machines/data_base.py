@@ -32,20 +32,20 @@ def create_database(image:str=None, start=False) -> Container:
         j += 1
     # Creamos el objeto de la base de datos
     db = Container(name, image, tag=TAG)
+    db.add_to_network("eth0", with_ip=db_ip)
     if image is None:
         db.base_image = platform.default_image
-        outcome = _config_database(db, start=start)
-        if outcome == -1:
-            return
-    db.add_to_network("eth0", with_ip=db_ip)
-    containers.update_cs_and_notify(db)
+        _config_database(db)
+    else:
+        successful = containers.init(db)
+        if len(successful) == 0: db = None
+    return db
 
 # --------------------------------------------------------------------
-def _config_database(db:Container, start=False) -> str:
+def _config_database(db:Container):
     db_logger.info(" Configurando base de datos...")
     # Lanzamos el contenedor e instalamos modulos
-    db_logger.info(f" Lanzando '{db}'...")
-    db.init(); db.start()
+    containers.init(db); containers.start(db)
     db_logger.info(" Instalando mongodb (puede tardar)...")
     try:
         db.update_apt()
@@ -55,16 +55,16 @@ def _config_database(db:Container, start=False) -> str:
         err_msg = (" Fallo al instalar mongodb, " + 
                         "error de lxc: " + str(err))
         db_logger.error(err_msg)
-        db_logger.error(f" Eliminando '{db}'")
-        db.stop(); db.delete()
-        return -1
-    # Configuramos el mongo file
-    _config_mongofile(db)
-    # Paramos el contenedor
-    if not start:
-        db.stop()
-    db_logger.info(" Base de datos configurada\n")
-
+        setattr(db, "config_error", True)
+        containers.stop(db)
+    else:
+        # Configuramos el mongo file
+        _config_mongofile(db)
+        containers.stop(db)
+        db_logger.info(" Base de datos configurada con exito\n")
+    containers.update_cs_without_notify(db)
+    
+    
 def _config_mongofile(db:Container):
     msg = " Configurando el fichero mongodb de la base de datos..."
     db_logger.info(msg)

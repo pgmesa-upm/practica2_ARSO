@@ -125,7 +125,7 @@ def configure_netfile(c:Container):
     remove(file2)
     
 # -------------------------------------------------------------------- 
-def update_containers(*cs_to_update, remove:bool=False):
+def update_cs_without_notify(*cs_to_update, remove:bool=False):
     cs = register.load(ID)
     if cs == None:
         c = cs_to_update[0]
@@ -179,7 +179,7 @@ def _update_container(c_to_update:Container, remove:bool=False):
     if register.load(ID) is None:
         _add_container(c_to_update)
     else:
-        update_containers(c_to_update, remove=remove)
+        update_cs_without_notify(c_to_update, remove=remove)
 
 def _add_container(c_to_add:Container):
     """Añade un contenedor al registro
