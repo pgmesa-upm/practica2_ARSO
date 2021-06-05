@@ -100,8 +100,8 @@ class Container:
         except LxcError as err:
             out = str(err)
         state = out.strip()
-        # risky_cond = state == "starting"
-        if state == "running" or state == "degraded":
+        risky_cond = state == "starting"
+        if state == "running" or state == "degraded" or risky_cond:
             self.started_up = True
             return
         self.started_up = False
@@ -121,11 +121,11 @@ class Container:
             self.refresh()
     
     def update_apt(self):
-        self.execute(["apt","update"])
-        self.execute(["apt", "upgrade", "-y"])
+        self.execute(["apt-get","update"])
+        # self.execute(["apt", "upgrade", "-y"])
     
     def install(self, module:str):
-        self.execute(["apt","install","-y",module])
+        self.execute(["apt-get","install","-y",module])
         
     def publish(self, alias:str=None):
         if self.state != STOPPED:
