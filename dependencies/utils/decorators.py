@@ -3,7 +3,7 @@ import logging
 from math import floor
 from logging import Logger
 from time import time
-
+import concurrent.futures as conc
 # -------------------------- DECORADORES -----------------------------
 # --------------------------------------------------------------------
 # Modulo en el que se definen decoradores genericos y no relacionados
@@ -45,11 +45,15 @@ def catch_foreach(logger:Logger=None):
     """
     def _catch_foreach(func):
         def catch (*args, **optionals):
-            successful = []
-            for a in args:
+            successful = []; threads = {}
+            with conc.ThreadPoolExecutor() as executor:
+                for a in args:
+                    thread = executor.submit(func, a, **optionals)
+                    threads[thread] = a
+            for thread in threads:  
                 try:
-                    func(a, **optionals)
-                    successful.append(a)
+                    thread.result()
+                    successful.append(threads[thread])
                 except Exception as err:
                     if str(err) == "":
                         pass

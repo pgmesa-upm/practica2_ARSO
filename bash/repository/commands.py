@@ -1,7 +1,9 @@
 
+from concurrent.futures import thread
 from dependencies.lxc.lxc_classes.container import Container
 import logging
 from pickle import load
+import concurrent.futures as conc
 
 from .reused_code import target_containers
 from program.controllers import bridges, containers
@@ -223,7 +225,6 @@ def add(num:int, options={}, flags=[], extra_cs=[]):
             servs = servers.create_servers(num, *names, image=simage)
         else:
             servs = servers.create_servers(num, image=simage)
-            
     successful_cs = extra_cs + servs
     if not "-q" in flags:
         program.list_lxc_containers() 
@@ -277,23 +278,44 @@ def deploy(numServs:int, options={}, flags=[]):
         lbimage = options["--lbimage"]["args"][0]
     if "--dbimage" in options:
         dbimage = options["--dbimage"]["args"][0]
-    db = data_base.create_database(image=dbimage)
-    if db is not None: extra.append(db)
+    # db = data_base.create_database(image=dbimage)
+    #if db is not None: extra.append(db)
     algorithm = None
     if "--balance" in options:
         algorithm = options["--balance"]["args"][0]
-    lb = load_balancer.create_lb(image=lbimage, balance=algorithm)
-    if lb is not None: extra.append(lb)
+    # lb = load_balancer.create_lb(image=lbimage, balance=algorithm)
+    # if lb is not None: extra.append(lb)
     # Configurmaos clientes
+    clname = None
     if "--client" in options:
         if "--climage" in options:
             climage = options["--climage"]["args"][0]
         try:
-            name = options["--client"]["args"][0]
-            cl = client.create_client(name=name, image=climage)
+            clname = options["--client"]["args"][0]
+            # cl = client.create_client(name=name, image=climage)
         except IndexError:
-            cl = client.create_client(name="cl", image=climage)
-        if cl is not None: extra.append(cl)
+            clname = "cl"
+        # if cl is not None: extra.append(cl)
+    # Configuramos de forma concurrente
+    with conc.ThreadPoolExecutor() as executor:
+        threads = []
+        db_thread = executor.submit(
+            data_base.create_database, image=dbimage
+        )
+        threads.append(db_thread)
+        lb_thread = executor.submit(
+            load_balancer.create_lb, image=lbimage, balance=algorithm
+        )
+        threads.append(lb_thread)
+        if "--client" in options:
+            cl_thread = executor.submit(
+                client.create_client, name=clname, image=climage
+            )
+            threads.append(cl_thread)
+        for thr in threads:
+            container = thr.result()
+            if container != None:
+                extra.append(container)
     add(numServs, options=options, flags=flags, extra_cs=extra) 
     cmd_logger.info(" Plataforma de servidores desplegada")
 
