@@ -5,7 +5,6 @@ from time import sleep
 from ...lxc import lxc
 from ..lxc import LxcError
 
-
 # Posibles estados de los contenedores
 NOT_INIT = "NOT INITIALIZED"
 STOPPED = "STOPPED"
@@ -18,14 +17,14 @@ class Container:
 
         Args:
             name (str): Nombre del contenedor
-            container_image (str): Imagen con la que se va a crear 
+            image (str): Imagen con la que se va a crear 
                 el contenedor
             tag (str, optional): Tag para diferenciar la funcionalidad
                 de cada contenedor
         """
-    def __init__(self, name:str, container_image:str, tag:str=""):
+    def __init__(self, name:str, base_image:str, tag:str=""):
         self.name = str(name)
-        self.container_image = container_image
+        self.base_image = base_image
         self.state = NOT_INIT
         self.started_up = False
         self.tag = tag
@@ -101,7 +100,8 @@ class Container:
         except LxcError as err:
             out = str(err)
         state = out.strip()
-        if state == "running" or state == "degraded":
+        risky_cond = state == "starting"
+        if state == "running" or state == "degraded" or risky_cond:
             self.started_up = True
             return
         self.started_up = False
@@ -126,7 +126,7 @@ class Container:
     
     def install(self, module:str):
         self.execute(["apt","install","-y",module])
-    
+        
     def publish(self, alias:str=None):
         if self.state != STOPPED:
             err = (f" {self.tag} '{self.name}' debe estar parado para " + 
@@ -167,7 +167,7 @@ class Container:
             err = (f" {self.tag} '{self.name}' esta '{self.state}' " +
                                 "y no puede ser inicializado de nuevo")
             raise LxcError(err)
-        lxc.run(["lxc", "init", self.container_image, self.name])  
+        lxc.run(["lxc", "init", self.base_image, self.name])  
         self.state = STOPPED
         # Se limitan los recursos del contenedor 
         limits = {

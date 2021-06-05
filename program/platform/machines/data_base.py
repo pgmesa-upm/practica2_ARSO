@@ -17,86 +17,54 @@ from program.platform import platform
 
 db_logger = logging.getLogger(__name__)
 # Tag e id de registro para la imagen configurada
-TAG = "data base"; IMG_ID = "db_image"
+TAG = "data base"
 # Puerto en que se van a ejecutar
 db_ip = "10.0.0.20"
 # --------------------------------------------------------------------
-def get_database(image:str=None) -> Container:
+def create_database(image:str=None, start=False) -> Container:
     # Comprobamos que si hace falta configurar una imagen base para
-    # los servidores o ya nos han pasado una o se ha creado antes 
-    # y esta disponible 
+    # la base de datos o ya nos han pasado una o se ha creado antes 
+    # y esta disponible
     name = "db"
     j = 1
     while name in lxc.lxc_list():
         name = f"db{j}"
         j += 1
-    if image is None:
-        if platform.is_imageconfig_needed(IMG_ID):
-            image = _config_image()
-        else:
-            image_saved = register.load(IMG_ID)
-            alias = image_saved["alias"]
-            image = alias
-            if alias == "": image = image_saved["fingerprint"]
-    # Creamos los objetos de lo cliente
+    # Creamos el objeto de la base de datos
     db = Container(name, image, tag=TAG)
     db.add_to_network("eth0", with_ip=db_ip)
+    if image is None:
+        db.base_image = platform.default_image
+        _config_database(db)
+    else:
+        successful = containers.init(db)
+        if len(successful) == 0: db = None
     return db
+
 # --------------------------------------------------------------------
-def _config_image() -> str:
-    db_logger.info(" Creando la imagen base de la base de datos...")
-    # Vemos que no haya un contenedor con ese nombre ya
-    name = "dbconfig"
-    j = 1
-    while name in lxc.lxc_list():
-        name = f"dbconfig{j}"
-        j += 1
-    msg = (f" Contenedor usado para crear imagen " + 
-          f"de la base de datos -> '{name}'")
-    db_logger.debug(msg)
-    db_c = Container(name, platform.default_image)
+def _config_database(db:Container):
+    db_logger.info(" Configurando base de datos...")
     # Lanzamos el contenedor e instalamos modulos
-    db_logger.info(f" Lanzando '{name}'...")
-    db_c.init(); db_c.start()
+    containers.init(db); containers.start(db)
     db_logger.info(" Instalando mongodb (puede tardar)...")
     try:
-        db_c.update_apt()
-        db_c.install("mongodb")
+        db.update_apt()
+        db.install("mongodb")
         db_logger.info(" mongodb instalado con exito")
     except lxc.LxcError as err:
         err_msg = (" Fallo al instalar mongodb, " + 
                         "error de lxc: " + str(err))
         db_logger.error(err_msg)
-        return platform.default_image
-    # Configuramos el mongo file
-    _config_mongofile(db_c)
-    # Vemos que no existe una imagen con el alias que vamos a usar
-    alias = "mongo_db"
-    k = 1
-    images = lxc.lxc_image_list()
-    aliases = list(map(lambda f: images[f]["ALIAS"], images))  
-    while alias in aliases:
-        alias = f"mongo_db{k}"
-        k += 1
-    # Una vez el alias es valido publicamos la imagen
-    msg = (f" Publicando imagen base de la base de datos " + 
-           f"con alias '{alias}'...")
-    db_logger.info(msg)
-    db_c.stop(); db_c.publish(alias=alias)
-    db_logger.info(" Imagen base de la base de datos creada\n")
-    # Eliminamos el contenedor
-    db_c.delete()
-    # Guardamos la imagen en el registro y la devolvemos 
-    # (obtenemos tambien la huella que le ha asignado lxc)
-    images = lxc.lxc_image_list()
-    fingerprint = ""
-    for f, info in images.items():
-        if info["ALIAS"] == alias:
-            fingerprint = f
-    image_info = {"alias": alias, "fingerprint": fingerprint}
-    register.add(IMG_ID, image_info)
-    return alias
-
+        setattr(db, "config_error", True)
+        containers.stop(db)
+    else:
+        # Configuramos el mongo file
+        _config_mongofile(db)
+        containers.stop(db)
+        db_logger.info(" Base de datos configurada con exito\n")
+    containers.update_cs_without_notify(db)
+    
+    
 def _config_mongofile(db:Container):
     msg = " Configurando el fichero mongodb de la base de datos..."
     db_logger.info(msg)
@@ -116,4 +84,4 @@ def _config_mongofile(db:Container):
         err_msg = f" Fallo al configurar el fichero de mongodb: {err}" 
         db_logger.error(err_msg)
     remove(file_name)
-    # --------------------------------------------------------------------    
+# --------------------------------------------------------------------    

@@ -23,7 +23,7 @@ PORT = 8080
 # Donde se guardan las aplicaciones (default de tomcat8)
 tomcat_app_path = "/var/lib/tomcat8/webapps"
 # --------------------------------------------------------------------
-def get_servers(num:int, *names, image:str=None) -> list:
+def create_servers(num:int, *names, image:str=None) -> list:
     """Devuelve los objetos de los servidores que se vayan a crear 
     configurados
 
@@ -36,17 +36,6 @@ def get_servers(num:int, *names, image:str=None) -> list:
     Returns:
         list: lista de objetos de tipo Contenedor (servidores)
     """
-    # Comprobamos que si hace falta configurar una imagen base para
-    # los servidores o ya nos han pasado una o se ha creado antes 
-    # y esta disponible 
-    if image is None:
-        if platform.is_imageconfig_needed(IMG_ID):
-            image = _config_image()
-        else:
-            image_saved = register.load(IMG_ID)
-            alias = image_saved["alias"]
-            image = alias
-            if alias == "": image = image_saved["fingerprint"]
     # Creamos los objetos de los servidores
     servers = []
     server_names = _process_names(num, *names)
@@ -57,7 +46,10 @@ def get_servers(num:int, *names, image:str=None) -> list:
         for c in cs:
             ips.append(c.networks.get("eth0",""))
     for name in server_names:
-        server = Container(name, image, tag=TAG)
+        if image == None:
+            server = Container(name, platform.default_image, tag=TAG)
+        else:
+            server = Container(name, image, tag=TAG)
         # Lo añadimos a una red con una ip que no este usando ningun
         # otro contenedor
         ip = "10.0.0.11"
@@ -71,33 +63,55 @@ def get_servers(num:int, *names, image:str=None) -> list:
         setattr(server, "app", None)
         setattr(server, "marked", False)
         servers.append(server)
-    return servers
+    successful = _config_servs(*servers, image=image)
+    return successful
 
-def _config_image() -> str:
-    serv_logger.info(" Creando la imagen base de los servidores...")
-    # Vemos que no haya un contenedor con ese nombre ya
-    name = "servconfig"
-    j = 1
-    while name in lxc.lxc_list():
-        name = f"servconfig{j}"
-        j += 1
-    msg = (f" Contenedor usado para crear imagen " + 
-          f"de servidores -> '{name}'")
-    serv_logger.debug(msg)
-    serv = Container(name, platform.default_image)
-    # Lanzamos el contenedor e instalamos modulos
-    serv_logger.info(f" Lanzando '{name}'...")
-    serv.init(); serv.start()
-    serv_logger.info(" Instalando tomcat8 (puede tardar)...")
-    try:
-        serv.update_apt()
-        serv.install("tomcat8")
-        serv_logger.info(" Tomcat8 instalado con exito")
-    except lxc.LxcError as err:
-        err_msg = (" Fallo al instalar tomcat8, " + 
-                            "error de lxc: " + str(err))
-        serv_logger.error(err_msg)
-        return platform.default_image
+# --------------------------------------------------------------------
+def _config_servs(*servs, image=None) -> list:
+    # Comprobamos que si hace falta configurar una imagen base para
+    # los servidores en base a si ya la hemos creado antes o 
+    #  nos han pasado una en concreto para usar
+    servs = list(servs); successful = []
+    if image == None and platform.is_imageconfig_needed(IMG_ID):
+        serv = servs.pop(0)
+        serv_logger.info(" Creando la imagen base de los servidores...")
+        msg = (f" Contenedor usado para crear imagen " + 
+            f"de servidores -> '{serv}'")
+        serv_logger.debug(msg)
+        # Lanzamos el contenedor e instalamos tomcat8
+        containers.init(serv); containers.start(serv)
+        serv_logger.info(f" Configurando {serv.tag} '{serv}'...")
+        serv_logger.info(" Instalando tomcat8 (puede tardar)...")
+        try:
+            serv.update_apt()
+            serv.install("tomcat8")
+            serv_logger.info(" Tomcat8 instalado con exito")
+        except lxc.LxcError as err:
+            err_msg = (" Fallo al instalar tomcat8, " + 
+                                "error de lxc: " + str(err))
+            serv_logger.error(err_msg)
+            image = platform.default_image
+            setattr(serv, "config_error", True)
+            for s in servs:
+                setattr(s, "config_error", True)
+            containers.stop(serv)
+        else:
+            _publish_tomcat_image(serv)
+            msg = (" Configuracion de imagen base de servidores " + 
+                   "realizada con exito\n")
+            serv_logger.info(msg)
+        successful.append(serv)
+
+    if image == None:
+        image_saved = register.load(IMG_ID)
+        alias = image_saved["alias"]
+        image = alias
+        if alias == "": image = image_saved["fingerprint"]
+        for s in servs: s.base_image = alias
+    successful += containers.init(*servs)
+    return successful
+
+def _publish_tomcat_image(serv:Container):
     # Vemos que no existe una imagen con el alias que vamos a usar
     alias = "tomcat8_serv"
     k = 1
@@ -108,13 +122,11 @@ def _config_image() -> str:
         k += 1
     # Una vez el alias es valido publicamos la imagen
     msg = (f" Publicando imagen base de servidores " + 
-           f"con alias '{alias}'...")
+        f"con alias '{alias}'...")
     serv_logger.info(msg)
-    serv.stop(); serv.publish(alias=alias)
-    serv_logger.info(" Imagen base de servidores creada\n")
-    # Eliminamos el contenedor
-    serv.delete()
-    # Guardamos la imagen en el registro y la devolvemos 
+    containers.stop(serv); serv.publish(alias=alias)
+    serv_logger.info(" Publicacion completada")
+    # Guardamos la imagen en el registro
     # (obtenemos tambien la huella que le ha asignado lxc)
     images = lxc.lxc_image_list()
     fingerprint = ""
@@ -123,7 +135,6 @@ def _config_image() -> str:
             fingerprint = f
     image_info = {"alias": alias, "fingerprint": fingerprint}
     register.add(IMG_ID, image_info)
-    return alias
 
 # --------------------------------------------------------------------
 def change_app(server:Container, app_path:str, name:str):
@@ -157,7 +168,7 @@ def change_app(server:Container, app_path:str, name:str):
                 "realizada con exito")
     server.app = name
     server.marked = False
-    containers.update_containers(server)
+    containers.update_cs_without_notify(server)
     serv_logger.info(msg)
 
 # --------------------------------------------------------------------
@@ -225,7 +236,7 @@ def mark_htmlindexes(s:Container, undo=False):
     word2 = word1.lower().replace("n", "")
     serv_logger.info(f" Servidor '{s.name}' {word2}")
     os.remove("index.html")
-    containers.update_containers(s)
+    containers.update_cs_without_notify(s)
     
 # --------------------------------------------------------------------
 def _process_names(num:int, *names) -> list:

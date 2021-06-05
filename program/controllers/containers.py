@@ -125,8 +125,13 @@ def configure_netfile(c:Container):
     remove(file2)
     
 # -------------------------------------------------------------------- 
-def update_containers(*cs_to_update, remove:bool=False):
+def update_cs_without_notify(*cs_to_update, remove:bool=False):
     cs = register.load(ID)
+    if cs == None:
+        c = cs_to_update[0]
+        _add_container(c)
+        cs_to_update = list(cs_to_update).remove(c)
+        cs = [c]
     cs_dict = objectlist_as_dict(cs, key_attribute="name")
     for c in cs_to_update:
         if c.name in cs_dict:
@@ -134,10 +139,18 @@ def update_containers(*cs_to_update, remove:bool=False):
                 cs_dict.pop(c.name)
             else:
                 cs_dict[c.name] = c
+            break
+        else:
+            if not remove:
+                cs_dict[c.name] = c
     if len(cs_dict) == 0:
         register.remove(ID)
     else:
         register.update(ID, list(cs_dict.values()))
+        
+def update_cs_and_notify(*cs_to_update, remove:bool=False):
+    for c in cs_to_update:
+        _update_container(c, remove=remove)
    
 def _update_container(c_to_update:Container, remove:bool=False):
     """Actualiza el objeto de un contenedor en el registro
@@ -163,7 +176,10 @@ def _update_container(c_to_update:Container, remove:bool=False):
             register.update(
                 "updates", True, override=False, dict_id="s_state"
             )
-    update_containers(c_to_update, remove=remove)
+    if register.load(ID) is None:
+        _add_container(c_to_update)
+    else:
+        update_cs_without_notify(c_to_update, remove=remove)
 
 def _add_container(c_to_add:Container):
     """Añade un contenedor al registro

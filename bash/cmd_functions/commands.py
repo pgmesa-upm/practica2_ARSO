@@ -195,30 +195,13 @@ def add(num:int, options={}, flags=[], extra_cs=[]):
         return
     existent_cs = register.load(containers.ID)
     if "-cl" in options:
-        if existent_cs != None:
-            cl_list = list(filter(
-                lambda cs: cs.tag == client.TAG, existent_cs
-            ))
-            if len(cl_list) > 0:
-                msg = (f" La plataforma no admite mas de 1 contenedor " +
-                        f"cliente. Ya hay un cliente creado -> " + 
-                        f"'{cl_list[0].name}'")
-                cmd_logger.error(msg)
-                return
-        if num > 1:
-            msg = (f" La plataforma no admite mas de 1 contenedor cliente")
-            cmd_logger.error(msg)
-            return
-        climage = None
+        climage = None; name = "cl"
         if "--image" in options:
             climage = options["--image"]["args"][0]
         if "--name" in options:
-            cl = client.get_client(
-                name=options["--name"]["args"][0],image=climage
-            )
-        else:
-            cl = client.get_client(image=climage)
-        cs = [cl]
+            name = options["--name"]["args"][0]
+        client.create_client(name=name, image=climage)
+        return
     else:
         if existent_cs != None:
             ex_s = filter(lambda cs: cs.tag == servers.TAG, existent_cs)
@@ -234,45 +217,27 @@ def add(num:int, options={}, flags=[], extra_cs=[]):
         if "--image" in options:
             simage = options["--image"]["args"][0]
         if "--simage" in options:
-            simage = options["--simage"]["args"][0]
-            
+            simage = options["--simage"]["args"][0] 
         if "--name" in options:   
             names = options["--name"]["args"]
-            cs = extra_cs + servers.get_servers(
-                num, 
-                *names, 
-                image=simage
-            )
+            servs = servers.create_servers(num, *names, image=simage)
         else:
-            cs = extra_cs + servers.get_servers(
-                num,
-                image=simage
-            )
-    # Creando contenedores 
-    cs_s = concat_array(cs)
-    msg = f" Nombre de contenedores (objetos) --> '{cs_s}'"
-    cmd_logger.debug(msg)
-    launch = True if "-l" in flags else False
-    show = True if not launch and "-q" not in flags else False
-    cmd_logger.debug(f" Launch --> {launch} | show --> {show}")
-    cmd_logger.info(f" Inicializando contenedores '{cs_s}'...")
-    successful_cs = containers.init(*cs)
+            servs = servers.create_servers(num, image=simage)
+            
+    successful_cs = extra_cs + servs
     if not "-q" in flags:
         program.list_lxc_containers() 
     cs_s = concat_array(successful_cs)
     msg = (f" Contenedores '{cs_s}' inicializados\n")
     cmd_logger.info(msg)
-    if len(successful_cs) != 0:  
-        # Actualizamos la plataforma
+    if len(successful_cs) > 0:
         cmd_logger.info(" Estableciendo conexiones " +
                                 "entre contenedores y bridges...")
         platform.update_conexions()
         cmd_logger.info(" Conexiones establecidas\n")
-        # Arrancamos los contenedores creados con exito 
-        # (si nos lo han pedido) 
-        if successful_cs != None and launch:
+        if "-l" in flags:
             c_names = list(map(lambda c: c.name, successful_cs))
-            start(*c_names, flags=flags) 
+            start(*c_names, options=options, flags=flags)
                  
 # --------------------------------------------------------------------
 def deploy(numServs:int, options={}, flags=[]):
@@ -312,25 +277,23 @@ def deploy(numServs:int, options={}, flags=[]):
         lbimage = options["--lbimage"]["args"][0]
     if "--dbimage" in options:
         dbimage = options["--dbimage"]["args"][0]
-    db = data_base.get_database(image=dbimage)
-    extra.append(db)
+    db = data_base.create_database(image=dbimage)
+    if db is not None: extra.append(db)
     algorithm = None
     if "--balance" in options:
         algorithm = options["--balance"]["args"][0]
-    lb = load_balancer.get_lb(image=lbimage, balance=algorithm)
-    extra.append(lb)
+    lb = load_balancer.create_lb(image=lbimage, balance=algorithm)
+    if lb is not None: extra.append(lb)
     # Configurmaos clientes
     if "--client" in options:
         if "--climage" in options:
             climage = options["--climage"]["args"][0]
         try:
             name = options["--client"]["args"][0]
-            cl = client.get_client(name=name, image=climage)
+            cl = client.create_client(name=name, image=climage)
         except IndexError:
-            cl = client.get_client(image=climage)        
-        extra.append(cl)
-    # Añadimos todos los contenedores a la plataforma (En añadir se
-    # configuran los clientes)
+            cl = client.create_client(name="cl", image=climage)
+        if cl is not None: extra.append(cl)
     add(numServs, options=options, flags=flags, extra_cs=extra) 
     cmd_logger.info(" Plataforma de servidores desplegada")
 
