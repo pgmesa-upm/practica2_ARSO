@@ -5,7 +5,7 @@ from dependencies.register import register
 from dependencies.utils.tools import objectlist_as_dict
 from dependencies.lxc.lxc_classes.bridge import Bridge, LxcNetworkError
 
-if False:
+if True:
     from dependencies.utils.decorators import catch_foreach
 else:
     from dependencies.utils.decorators import (
