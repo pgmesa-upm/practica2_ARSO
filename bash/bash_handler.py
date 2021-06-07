@@ -415,7 +415,7 @@ def config_cli() -> Cli:
     msg = """ 
     executes the action without asking confirmation
     """
-    force = Flag("-f", description=msg)
+    force = Flag("-y", description=msg)
     cli.add_flag(force)
     # ++++++++++++++++++++++++++++
     msg = """ 

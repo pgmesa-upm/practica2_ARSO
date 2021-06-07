@@ -45,15 +45,11 @@ def catch_foreach(logger:Logger=None):
     """
     def _catch_foreach(func):
         def catch (*args, **optionals):
-            successful = []; threads = {}
-            with conc.ThreadPoolExecutor() as executor:
-                for a in args:
-                    thread = executor.submit(func, a, **optionals)
-                    threads[thread] = a
-            for thread in threads:  
+            successful = []
+            for a in args:
                 try:
-                    thread.result()
-                    successful.append(threads[thread])
+                    func(a, **optionals)
+                    successful.append(a)
                 except Exception as err:
                     if str(err) == "":
                         pass
@@ -66,3 +62,26 @@ def catch_foreach(logger:Logger=None):
     return _catch_foreach
 
 # -------------------------------------------------------------------- 
+
+# def _catch_foreach(func):
+#         def catch (*args, **optionals):
+#             successful = []; threads = {}
+#             with conc.ThreadPoolExecutor() as executor:
+#                 for a in args:
+#                     thread = executor.submit(func, a, **optionals)
+#                     threads[thread] = a
+#                     print(thread, a)
+#             for thread in threads:  
+#                 try:
+#                     print(thread.result())
+#                     successful.append(threads[thread])
+#                 except Exception as err:
+#                     if str(err) == "":
+#                         pass
+#                     elif logger == None:
+#                         print(f"ERROR:{err}")  
+#                     else:
+#                         logger.error(err)    
+#             return successful
+#         return catch
+#     return _catch_foreach

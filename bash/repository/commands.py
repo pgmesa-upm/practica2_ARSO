@@ -5,14 +5,13 @@ import logging
 from pickle import load
 import concurrent.futures as conc
 
-from .reused_code import target_containers
+from .reused_code import (
+    target_containers, get_db_opts, get_cl_opts,
+    get_lb_opts, get_servers_opts
+)
 from program.controllers import bridges, containers
 from program.platform.machines import (
-    servers, 
-    load_balancer, 
-    net_devices,
-    client,
-    data_base
+    servers, load_balancer, net_devices, client, data_base
 )
 from program import apps
 from program import program
@@ -137,7 +136,7 @@ def remove(*target_cs, options={}, flags=[],
             valid_cs.append(c)
         if len(valid_cs) == 0: return
         target_cs = valid_cs
-    if not "-f" in flags:
+    if not "-y" in flags:
         print("Se eliminaran los contenedores:" +
                     f" '{concat_array(target_cs)}'")
         answer = str(input("¿Estas seguro?(y/n): "))
@@ -190,41 +189,31 @@ def add(num:int, options={}, flags=[], extra_cs=[]):
             clientes y el balanceador, ademas de los servidores
     """
     if not platform.is_deployed():
-        msg = (" La plataforma de servidores no ha sido " +
-                    "desplegada, se debe crear una nueva antes " +
-                        "de añadir los servidores")
+        msg = (
+            " La plataforma de servidores no ha sido desplegada, se " +
+            "debe crear una nueva antes de añadir los servidores"
+        )
         cmd_logger.error(msg)
         return
+    
     existent_cs = register.load(containers.ID)
     if "-cl" in options:
-        climage = None; name = "cl"
-        if "--image" in options:
-            climage = options["--image"]["args"][0]
-        if "--name" in options:
-            name = options["--name"]["args"][0]
+        climage, name = get_cl_opts(options)
         client.create_client(name=name, image=climage)
         return
-    else:
+    elif num > 0:
         if existent_cs != None:
             ex_s = filter(lambda cs: cs.tag == servers.TAG, existent_cs)
             n = len(list(ex_s))
             if n + num > 5: 
                 msg = (f" La plataforma no admite mas de 5 servidores. " +
-                        f"Actualmente existen {n}, no se " +
-                                f"puede añadir {num} mas")
+                        f"Existen {n} actualmente, no se " +
+                        f"pueden añadir {num} mas")
                 cmd_logger.error(msg)
                 return
-        # Elegimos la imagen con la que se van a crear los servidores
-        simage = None
-        if "--image" in options:
-            simage = options["--image"]["args"][0]
-        if "--simage" in options:
-            simage = options["--simage"]["args"][0] 
-        if "--name" in options:   
-            names = options["--name"]["args"]
-            servs = servers.create_servers(num, *names, image=simage)
-        else:
-            servs = servers.create_servers(num, image=simage)
+        simage, names = get_servers_opts(options)
+        servs = servers.create_servers(num, *names, image=simage)
+        
     successful_cs = extra_cs + servs
     if not "-q" in flags:
         program.list_lxc_containers() 
@@ -268,35 +257,13 @@ def deploy(numServs:int, options={}, flags=[]):
     bgs_s = concat_array(succesful_bgs)
     cmd_logger.info(f" Bridges '{bgs_s}' creados\n")
     # Creando contenedores
-    lbimage = None; climage = None; dbimage=None; extra = []
-    if "--image" in options:
-        lbimage = options["--image"]["args"][0]
-        climage = options["--image"]["args"][0]
-        dbimage = options["--image"]["args"][0]
-    # Configurmaos balanceador
-    if "--lbimage" in options:
-        lbimage = options["--lbimage"]["args"][0]
-    if "--dbimage" in options:
-        dbimage = options["--dbimage"]["args"][0]
-    # db = data_base.create_database(image=dbimage)
-    #if db is not None: extra.append(db)
-    algorithm = None
-    if "--balance" in options:
-        algorithm = options["--balance"]["args"][0]
-    # lb = load_balancer.create_lb(image=lbimage, balance=algorithm)
-    # if lb is not None: extra.append(lb)
-    # Configurmaos clientes
-    clname = None
+    dbimage = get_db_opts(options)
+    lbimage, algorithm = get_lb_opts(options)
     if "--client" in options:
-        if "--climage" in options:
-            climage = options["--climage"]["args"][0]
-        try:
-            clname = options["--client"]["args"][0]
-            # cl = client.create_client(name=name, image=climage)
-        except IndexError:
-            clname = "cl"
-        # if cl is not None: extra.append(cl)
-    # Configuramos de forma concurrente
+        climage, clname = get_cl_opts(options)
+    simage, names = get_servers_opts(options)
+    # Configurando e Iniciando contenedores de forma concurrente
+    successful_cs = []
     with conc.ThreadPoolExecutor() as executor:
         threads = []
         db_thread = executor.submit(
@@ -312,11 +279,30 @@ def deploy(numServs:int, options={}, flags=[]):
                 client.create_client, name=clname, image=climage
             )
             threads.append(cl_thread)
+        servs_thread = executor.submit(
+            servers.create_servers, numServs, *names, image=simage
+        )
+        threads.append(servs_thread)
         for thr in threads:
             container = thr.result()
-            if container != None:
-                extra.append(container)
-    add(numServs, options=options, flags=flags, extra_cs=extra) 
+            if type(container) is list:
+                successful_cs += container
+            elif container != None:
+                successful_cs.append(container)
+    # Mostramos la informacion y comprobamos flag de arranque
+    if not "-q" in flags:
+        program.list_lxc_containers() 
+    cs_s = concat_array(successful_cs)
+    msg = (f" Contenedores '{cs_s}' inicializados\n")
+    cmd_logger.info(msg)
+    if len(successful_cs) > 0:
+        cmd_logger.info(" Estableciendo conexiones " +
+                                "entre contenedores y bridges...")
+        platform.update_conexions()
+        cmd_logger.info(" Conexiones establecidas\n")
+        if "-l" in flags:
+            c_names = list(map(lambda c: c.name, successful_cs))
+            start(*c_names, options=options, flags=flags)
     cmd_logger.info(" Plataforma de servidores desplegada")
 
 # --------------------------------------------------------------------
@@ -335,7 +321,7 @@ def destroy(options={}, flags=[]):
                  + "se debe crear una nueva antes de poder destruir")
         cmd_logger.error(msg)
         return
-    if not "-f" in flags:
+    if not "-y" in flags:
         msg = ("Se borrara por completo la infraestructura " + 
                 "creada, contenedores, bridges y sus conexiones " + 
                     "aun podiendo estar arrancadas")
@@ -350,7 +336,7 @@ def destroy(options={}, flags=[]):
         cmd_logger.warning(" No existen contenedores en el programa\n")
     else:
         c_names = list(map(lambda c: c.name, cs))
-        flags.append("-f") # Añadimos el flag -f
+        flags.append("-y") # Añadimos el flag -f
         remove(*c_names, flags=flags, skip_tags=[])
     # Eliminamos bridges
     bgs = register.load(bridges.ID)
@@ -405,7 +391,7 @@ def app(options={}, flags={}):
         apps.list_apps()
     elif "rm" in options:
         app_names = options["rm"]["args"]
-        if not "-f" in flags:
+        if not "-y" in flags:
             default = apps.get_defaultapp()
             if default in app_names:
                 print(f"La app '{default}' esta establecida como " + 
@@ -416,7 +402,7 @@ def app(options={}, flags={}):
         apps.remove_apps(*app_names)
     elif "emptyrep" in options:
         skip = []
-        if not "-f" in flags:
+        if not "-y" in flags:
             msg = ("Se eliminaran todas las aplicaciones del " +
                 "repositorio local")
             print(msg)
