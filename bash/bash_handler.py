@@ -436,6 +436,12 @@ def config_cli() -> Cli:
     """
     mark = Flag("-m", description=msg)
     cli.add_flag(mark)
+    # ++++++++++++++++++++++++++++
+    msg = """ 
+    executes the code sequencially instead of concurrently
+    """
+    concurrency = Flag("-s", description=msg)
+    cli.add_flag(concurrency)
     
     return cli
 # --------------------------------------------------------------------

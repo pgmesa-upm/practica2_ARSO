@@ -262,33 +262,45 @@ def deploy(numServs:int, options={}, flags=[]):
     if "--client" in options:
         climage, clname = get_cl_opts(options)
     simage, names = get_servers_opts(options)
-    # Configurando e Iniciando contenedores de forma concurrente
+    # Configurando e Iniciando contenedores
     successful_cs = []
-    with conc.ThreadPoolExecutor() as executor:
-        threads = []
-        db_thread = executor.submit(
-            data_base.create_database, image=dbimage
-        )
-        threads.append(db_thread)
-        lb_thread = executor.submit(
-            load_balancer.create_lb, image=lbimage, balance=algorithm
-        )
-        threads.append(lb_thread)
+    if "-s" in flags:
+        db = data_base.create_database(image=dbimage)
+        if db is not None: successful_cs.append(db)
+        lb = load_balancer.create_lb(image=lbimage, balance=algorithm)
+        if lb is not None: successful_cs.append(lb)
         if "--client" in options:
-            cl_thread = executor.submit(
-                client.create_client, name=clname, image=climage
+            cl = client.create_client(name=clname, image=climage)
+            if cl is not None: successful_cs.append(cl)
+        servs = servers.create_servers(numServs, *names, image=simage)
+        successful_cs += servs
+    else:
+        # Utilizamos concurrencia de hilos
+        with conc.ThreadPoolExecutor() as executor:
+            threads = []
+            db_thread = executor.submit(
+                data_base.create_database, image=dbimage
             )
-            threads.append(cl_thread)
-        servs_thread = executor.submit(
-            servers.create_servers, numServs, *names, image=simage
-        )
-        threads.append(servs_thread)
-        for thr in threads:
-            container = thr.result()
-            if type(container) is list:
-                successful_cs += container
-            elif container != None:
-                successful_cs.append(container)
+            threads.append(db_thread)
+            lb_thread = executor.submit(
+                load_balancer.create_lb, image=lbimage, balance=algorithm
+            )
+            threads.append(lb_thread)
+            if "--client" in options:
+                cl_thread = executor.submit(
+                    client.create_client, name=clname, image=climage
+                )
+                threads.append(cl_thread)
+            servs_thread = executor.submit(
+                servers.create_servers, numServs, *names, image=simage
+            )
+            threads.append(servs_thread)
+            for thr in threads:
+                container = thr.result()
+                if type(container) is list:
+                    successful_cs += container
+                elif container != None:
+                    successful_cs.append(container)
     # Mostramos la informacion y comprobamos flag de arranque
     if not "-q" in flags:
         program.list_lxc_containers() 
