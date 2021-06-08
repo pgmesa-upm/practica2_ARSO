@@ -1,4 +1,5 @@
 
+import bash.cmd_functions.commands as commands_rep
 from dependencies.cli.cli import Cli, CmdLineError
 from dependencies.cli.aux_classes import Command, Flag, Option
 
