@@ -195,7 +195,7 @@ def add(num:int, options={}, flags=[], extra_cs=[]):
     
     existent_cs = register.load(containers.ID)
     if "-cl" in options:
-        climage, name = get_cl_opts(options)
+        climage, name = get_cl_opts(options, flags)
         client.create_client(name=name, image=climage)
         return
     elif num > 0:
@@ -208,7 +208,7 @@ def add(num:int, options={}, flags=[], extra_cs=[]):
                         f"pueden añadir {num} mas")
                 cmd_logger.error(msg)
                 return
-        simage, names = get_servers_opts(options)
+        simage, names = get_servers_opts(options, flags)
         servs = servers.create_servers(num, *names, image=simage)
         
     successful_cs = extra_cs + servs
@@ -254,11 +254,11 @@ def deploy(numServs:int, options={}, flags=[]):
     bgs_s = concat_array(succesful_bgs)
     cmd_logger.info(f" Bridges '{bgs_s}' creados\n")
     # Creando contenedores
-    dbimage = get_db_opts(options)
-    lbimage, algorithm = get_lb_opts(options)
+    dbimage = get_db_opts(options, flags)
+    lbimage, algorithm = get_lb_opts(options, flags)
     if "--client" in options:
-        climage, clname = get_cl_opts(options)
-    simage, names = get_servers_opts(options)
+        climage, clname = get_cl_opts(options, flags)
+    simage, names = get_servers_opts(options, flags)
     # Configurando e Iniciando contenedores
     successful_cs = []
     if "-s" in flags:
