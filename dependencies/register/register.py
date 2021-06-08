@@ -1,6 +1,7 @@
 
 import os
 import pickle
+import threading
 
 # --------------------------- REGISTER  ------------------------------
 # --------------------------------------------------------------------
@@ -16,6 +17,39 @@ import pickle
 
 # Ubicacion relativa del registro        
 REL_PATH = ".register"
+# Candando para evitar problemas de concurrencia accediendo al registro
+reg_lock = threading.Lock()
+# --------------------------------------------------------------------
+# Decorador para bloquear las funciones que puedan llegar a sufrir 
+# problemas de concurrencia
+def lock(func):
+    def locked(*args, **opt_args):
+        # Otra opcion es usar "with reg_lock:"
+        reg_lock.acquire()
+        output = func(*args, **opt_args)
+        reg_lock.release()
+        return output
+    return locked
+
+@lock
+def _save(register:dict):
+    with open(REL_PATH, "wb") as file:
+        pickle.dump(register, file)
+        
+@lock
+def _load():
+    with open(REL_PATH, "rb") as file:
+        return pickle.load(file)
+
+@lock
+def _remove():
+    if os.path.exists(REL_PATH): 
+        os.remove(REL_PATH)
+
+@lock     
+def _reg_exists():
+    return os.path.exists(REL_PATH)
+
 # -------------------------------------------------------------------- 
 def config_location(path, name=".register"):
     """Permite configurar la ubicacion del registro y su nombre. 
@@ -28,7 +62,7 @@ def config_location(path, name=".register"):
     global REL_PATH
     REL_PATH = path+name
 
-# --------------------------------------------------------------------    
+# --------------------------------------------------------------------   
 def add(register_id:any, obj:object):
     """Crea una nueva pagina del registro. Si el registro no existe
     lo crea
@@ -40,7 +74,7 @@ def add(register_id:any, obj:object):
     Raises:
         RegisterError: [description]
     """
-    if not os.path.exists(REL_PATH):
+    if not _reg_exists():
         register = {}
     else:
         register = load()
@@ -50,9 +84,7 @@ def add(register_id:any, obj:object):
         raise RegisterError(err)
     else:
         register[register_id] = obj
-        
-    with open(REL_PATH, "wb") as file:
-            pickle.dump(register, file)
+    _save(register) 
 
 # -------------------------------------------------------------------- 
 def update(register_id:any, obj:object, override:bool=True, dict_id:any=None):
@@ -103,8 +135,7 @@ def update(register_id:any, obj:object, override:bool=True, dict_id:any=None):
         else:
             array = [value_saved, obj]
             register[register_id] = array
-    with open(REL_PATH, "wb") as file:
-        pickle.dump(register, file)   
+    _save(register)  
 
 # --------------------------------------------------------------------     
 def load(register_id:any=None) -> object:
@@ -119,8 +150,7 @@ def load(register_id:any=None) -> object:
         ser tambien iterables)
     """
     try:
-        with open(REL_PATH, "rb") as file:
-            register = pickle.load(file)
+        register = _load()
         if register_id == None:
             return register
         else:
@@ -138,10 +168,9 @@ def override(register:dict):
     Args:
         register (dict): Registro nuevo
     """
-    with open(REL_PATH, "wb") as file:
-        pickle.dump(register, file)
+    _save(register)
 
-# --------------------------------------------------------------------    
+# --------------------------------------------------------------------   
 def remove(register_id:any=None):
     """Elimina una pagina del registro. Si no se especifica ninguna
     se elimina todo el registro. Si el registro queda vacio al
@@ -158,14 +187,13 @@ def remove(register_id:any=None):
         if register_id in register:
             register.pop(register_id)
             if len(register) == 0:
-                os.remove(REL_PATH)
+                _remove()
             else:
                 override(register)
         else:
             raise RegisterError(f" id '{register_id}' was not found")
     else:
-        if os.path.exists(REL_PATH): 
-            os.remove(REL_PATH)
+        _remove()
 
 # -------------------------------------------------------------------- 
 class RegisterError(Exception):

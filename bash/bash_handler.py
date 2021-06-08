@@ -192,7 +192,7 @@ def _def_platform_cmds(cli:Cli):
     msg = """ 
     executes the action without asking confirmation
     """
-    force = Flag("-f", description=msg)
+    force = Flag("-y", description=msg)
     cli.add_flag(force)
     # ++++++++++++++++++++++++++++
     msg = """ 
@@ -213,6 +213,7 @@ def _def_platform_cmds(cli:Cli):
     """
     mark = Flag("-m", description=msg)
     cli.add_flag(mark)
+<<<<<<< HEAD
 
 
 
@@ -320,5 +321,13 @@ def _config_cli() -> Cli:
     # -------------
     _commands[cmd_name] = commands_rep.app
     
+=======
+    # ++++++++++++++++++++++++++++
+    msg = """ 
+    executes the code sequencially instead of concurrently
+    """
+    concurrency = Flag("-s", description=msg)
+    cli.add_flag(concurrency)
+>>>>>>> main
     
 # --------------------------------------------------------------------

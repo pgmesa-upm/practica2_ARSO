@@ -5,7 +5,12 @@ from contextlib import suppress
 
 from dependencies.register import register
 from dependencies.utils.tools import objectlist_as_dict
-from dependencies.utils.decorators import catch_foreach
+if True:
+    from dependencies.utils.decorators import catch_foreach
+else:
+    from dependencies.utils.decorators import (
+        catch_foreach_thread as catch_foreach
+    )
 from dependencies.lxc.lxc_classes.container import Container, LxcError
 from program.platform.machines import servers
 

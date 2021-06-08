@@ -3,7 +3,7 @@ import logging
 from math import floor
 from logging import Logger
 from time import time
-
+import concurrent.futures as conc
 # -------------------------- DECORADORES -----------------------------
 # --------------------------------------------------------------------
 # Modulo en el que se definen decoradores genericos y no relacionados
@@ -34,17 +34,43 @@ def timer(func):
     return f
 
 # -------------------------------------------------------------------- 
-def catch_foreach(logger:Logger=None):
+# LXC NO SOPORTA HILOS, CREA CADA CONTENEDOR SECUENCIALMENTE !!!!
+def catch_foreach_thread(logger:Logger=None):
     """Ejecuta una funcion tantas veces como argumentos no opcionales
     se hayan pasado a la funcion y maneja las excepciones que puedan 
-    surgir durante la ejecucion
-
-    Args:
-        logger (Logger, optional): logger con el que notificar los 
-            errores que puedan surgir
-    """
+    surgir durante la ejecucion. Utiliza un hilo por cada ejecucion.
+    Hay que tener cuidado de que las funciones que se pasen, no 
+    compartan el acceso a variables comunes o que estan esten 
+    bloqueadas con candado mientras se modifica su valor. Podrian 
+    saltar errores raros (por ejemplo en pickle si se accede a la vez
+    a un fichero podria saltar -> ERROR:Ran out of input. Tambien 
+    tiene la opcion de ejecutar de forma no concurrente """
     def _catch_foreach(func):
-        def catch (*args, **optionals):
+        def catch_concurrently(*args, **optionals):
+            successful = []; threads = {}
+            with conc.ThreadPoolExecutor() as executor:
+                for a in args:
+                    thread = executor.submit(func, a, **optionals)
+                    threads[thread] = a
+            for thread in threads:  
+                try:
+                    thread.result()
+                    successful.append(threads[thread])
+                except Exception as err:
+                    if str(err) == "":
+                        pass
+                    elif logger == None:
+                        print(f"ERROR:{err}")  
+                    else:
+                        logger.error(err)    
+            return successful
+        return catch_concurrently
+    return _catch_foreach
+
+# -------------------------------------------------------------------- 
+def catch_foreach(logger:Logger=None):
+    def _catch_foreach(func):
+        def catch(*args, **optionals):
             successful = []
             for a in args:
                 try:
@@ -60,5 +86,4 @@ def catch_foreach(logger:Logger=None):
             return successful
         return catch
     return _catch_foreach
-
-# -------------------------------------------------------------------- 
+    

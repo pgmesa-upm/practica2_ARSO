@@ -2,9 +2,15 @@
 import logging
 
 from dependencies.register import register
-from dependencies.utils.decorators import catch_foreach
 from dependencies.utils.tools import objectlist_as_dict
 from dependencies.lxc.lxc_classes.bridge import Bridge, LxcNetworkError
+
+if True:
+    from dependencies.utils.decorators import catch_foreach
+else:
+    from dependencies.utils.decorators import (
+        catch_foreach_thread as catch_foreach
+    )
 
 # --------------- CONTROLADOR DE BRIDGES (PUENTES) -------------------
 # --------------------------------------------------------------------

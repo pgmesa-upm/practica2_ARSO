@@ -1,6 +1,8 @@
 
 import logging
 from logging import Logger
+from os import name
+from contextlib import suppress
 
 from program.controllers import containers
 from dependencies.register import register
@@ -55,3 +57,41 @@ def target_containers(logger:Logger=None):
     return _target_containers
 
 # --------------------------------------------------------------------
+
+def get_servers_opts(options:dict):
+    simage = None; names = []
+    if "--image" in options:
+        simage = options["--image"]["args"][0]
+    if "--simage" in options:
+        simage = options["--simage"]["args"][0] 
+    if "--name" in options:   
+        names = options["--name"]["args"]
+    return simage, names
+
+def get_lb_opts(options:dict):
+    lbimage = None; algorithm = None
+    if "--image" in options:
+        lbimage = options["--image"]["args"][0]
+    if "--lbimage" in options:
+        lbimage = options["--lbimage"]["args"][0]
+    if "--balance" in options:
+        algorithm = options["--balance"]["args"][0]
+    return lbimage, algorithm
+
+def get_cl_opts(options:dict):
+    climage = None; clname = "cl"
+    if "--image" in options:
+        climage = options["--image"]["args"][0]
+    if "--climage" in options:
+        climage = options["--climage"]["args"][0]
+    with suppress(IndexError):
+        clname = options["--client"]["args"][0]
+    return climage, clname
+
+def get_db_opts(options:dict):
+    dbimage = None
+    if "--image" in options:
+        dbimage = options["--image"]["args"][0]
+    if "--dbimage" in options:
+        dbimage = options["--dbimage"]["args"][0]
+    return dbimage
