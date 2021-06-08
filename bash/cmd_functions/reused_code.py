@@ -1,7 +1,6 @@
 
 import logging
 from logging import Logger
-from os import name
 from contextlib import suppress
 
 from program.controllers import containers
