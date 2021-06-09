@@ -80,7 +80,8 @@ def _config_servs(*servs, image=None) -> list:
         serv_logger.debug(msg)
         # Lanzamos el contenedor e instalamos tomcat8
         containers.init(serv); containers.start(serv)
-        serv.stop(); serv.start()
+        # Rearrancamos por si acaso para evitar fallos al instalar
+        #serv.restart()
         serv_logger.info(f" Configurando {serv.tag} '{serv}'...")
         serv_logger.info(" Instalando tomcat8 (puede tardar)...")
         try:
