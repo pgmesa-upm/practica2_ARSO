@@ -3,6 +3,7 @@ import logging
 from logging import Logger
 from contextlib import suppress
 
+import dependencies.lxc.lxc as lxc
 from program.controllers import containers
 from dependencies.register import register
 from dependencies.utils.tools import objectlist_as_dict, remove_many
@@ -56,41 +57,58 @@ def target_containers(logger:Logger=None):
     return _target_containers
 
 # --------------------------------------------------------------------
-
-def get_servers_opts(options:dict):
-    simage = None; names = []
-    if "--image" in options:
-        simage = options["--image"]["args"][0]
+global_image = None; checked = False
+def _check_global_image(options:dict, flags:list):
+    global global_image, checked
+    if not checked:
+        image = None
+        if "--image" in options:
+            image = _check_image(options["--image"]["args"][0], flags)
+        global_image = image
+        checked = True
+    return global_image
+    
+def get_servers_opts(options:dict, flags:list):
+    simage = _check_global_image(options, flags); names = []
     if "--simage" in options:
-        simage = options["--simage"]["args"][0] 
+        simage = _check_image(options["--simage"]["args"][0], flags)
     if "--name" in options:   
         names = options["--name"]["args"]
     return simage, names
 
-def get_lb_opts(options:dict):
-    lbimage = None; algorithm = None
-    if "--image" in options:
-        lbimage = options["--image"]["args"][0]
+def get_lb_opts(options:dict, flags:list):
+    lbimage = _check_global_image(options, flags); algorithm = None
     if "--lbimage" in options:
-        lbimage = options["--lbimage"]["args"][0]
+        lbimage = _check_image(options["--lbimage"]["args"][0], flags)
     if "--balance" in options:
         algorithm = options["--balance"]["args"][0]
     return lbimage, algorithm
 
-def get_cl_opts(options:dict):
-    climage = None; clname = "cl"
-    if "--image" in options:
-        climage = options["--image"]["args"][0]
+def get_cl_opts(options:dict, flags:list):
+    climage = _check_global_image(options, flags); clname = "cl"
     if "--climage" in options:
-        climage = options["--climage"]["args"][0]
-    with suppress(IndexError):
+        climage = _check_image(options["--climage"]["args"][0], flags)
+    with suppress(KeyError):
         clname = options["--client"]["args"][0]
     return climage, clname
 
-def get_db_opts(options:dict):
-    dbimage = None
-    if "--image" in options:
-        dbimage = options["--image"]["args"][0]
+def get_db_opts(options:dict,flags:list):
+    dbimage = _check_global_image(options, flags)
     if "--dbimage" in options:
-        dbimage = options["--dbimage"]["args"][0]
+        dbimage = _check_image(options["--dbimage"]["args"][0], flags)
     return dbimage
+
+def _check_image(image:str, flags:list):
+    if "-y" not in flags:
+        im_list = lxc.lxc_image_list()
+        fingerprints = im_list.keys()
+        aliases = []
+        for f in fingerprints:
+            aliases.append(im_list[f]["ALIAS"])
+        if image not in fingerprints and image not in aliases:
+            print(f"La imagen '{image}' no se encuentra en el " +
+                "repositorio local de aplicaciones")
+            answer = input("¿Utilizar de todos modos?(y/n): ")
+            if answer.lower() != "y":
+                return None
+    return image

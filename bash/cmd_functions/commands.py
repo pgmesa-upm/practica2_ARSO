@@ -14,6 +14,8 @@ from program import apps
 from program import program
 from dependencies.register import register
 from dependencies.utils.tools import concat_array
+import dependencies.lxc.lxc as lxc
+from dependencies.lxc.lxc_classes.container import Container
 from program.platform import platform
 
 # --------------------- REPOSITORIO DE COMANDOS ----------------------
@@ -195,7 +197,7 @@ def add(num:int, options={}, flags=[], extra_cs=[]):
     
     existent_cs = register.load(containers.ID)
     if "-cl" in options:
-        climage, name = get_cl_opts(options)
+        climage, name = get_cl_opts(options, flags)
         client.create_client(name=name, image=climage)
         return
     elif num > 0:
@@ -208,7 +210,7 @@ def add(num:int, options={}, flags=[], extra_cs=[]):
                         f"pueden añadir {num} mas")
                 cmd_logger.error(msg)
                 return
-        simage, names = get_servers_opts(options)
+        simage, names = get_servers_opts(options, flags)
         servs = servers.create_servers(num, *names, image=simage)
         
     successful_cs = extra_cs + servs
@@ -254,11 +256,11 @@ def deploy(numServs:int, options={}, flags=[]):
     bgs_s = concat_array(succesful_bgs)
     cmd_logger.info(f" Bridges '{bgs_s}' creados\n")
     # Creando contenedores
-    dbimage = get_db_opts(options)
-    lbimage, algorithm = get_lb_opts(options)
+    dbimage = get_db_opts(options, flags)
+    lbimage, algorithm = get_lb_opts(options, flags)
     if "--client" in options:
-        climage, clname = get_cl_opts(options)
-    simage, names = get_servers_opts(options)
+        climage, clname = get_cl_opts(options, flags)
+    simage, names = get_servers_opts(options, flags)
     # Configurando e Iniciando contenedores
     successful_cs = []
     if "-s" in flags:
@@ -438,6 +440,43 @@ def show(options={}, flags={}):
         program.show_dependencies()
     elif "info" in options:
         platform.print_info()
+        
 # --------------------------------------------------------------------
-def servs(options={}, flags={}):
-    pass
+@target_containers(logger=cmd_logger)
+def publish(c:Container, options={}, flags={}):
+    im_dict = lxc.lxc_image_list()
+    aliases = []
+    for f in im_dict:
+        aliases.append(im_dict[f]["ALIAS"])
+    if not "--alias" in options:
+        if c.tag == servers.TAG:
+            name = "tomcat8_serv"
+        elif c.tag == data_base.TAG:
+            name = "mongo_db"
+        elif c.tag == load_balancer.TAG:
+            name = "haproxy_lb"
+        elif c.tag == client.TAG:
+            name = "lynx_client"
+        j = 0
+        while name in aliases:
+            j += 1
+            if j == 1:
+                name = f"{name}{j}"
+                continue
+            name = f"{name[:-1]}{j}"
+    else:
+        name = options["--alias"]["args"][0]
+    if name in aliases:
+        err_msg = (f" El alias '{name}' ya existe en el repositorio " +
+                    "local de lxc")
+        cmd_logger.error(err_msg)
+        return
+    try:
+        msg = (f" Publicando imagen de '{c.tag}' '{c}' con alias " + 
+               f"'{name}' (puede tardar)...")
+        cmd_logger.info(msg)
+        c.publish(alias=name)
+        cmd_logger.info(" Imagen publicada con exito")
+    except Exception as err:
+        cmd_logger.error(err)
+        

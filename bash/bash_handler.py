@@ -159,6 +159,22 @@ def _def_platform_cmds(cli:Cli):
     cli.add_command(term)
     _commands[cmd_name] = commands_rep.term
     
+    # ++++++++++++++++++++++++++++
+    cmd_name = "publish"
+    msg = """ 
+    <container_name> publish the image of the container specified
+    """
+    publish = Command(
+        cmd_name, description=msg, 
+        extra_arg=True, mandatory=True
+    )
+    publish.add_option(
+        "--alias", description="allows to specify the alias of the image",
+        extra_arg=True, mandatory=True
+    )
+    cli.add_command(publish)
+    _commands[cmd_name] = commands_rep.publish
+    
     # ---------------------- Flags
     # ++++++++++++++++++++++++++++
     msg = """ 

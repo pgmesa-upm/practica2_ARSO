@@ -73,13 +73,14 @@ def _config_servs(*servs, image=None) -> list:
     #  nos han pasado una en concreto para usar
     servs = list(servs); successful = []
     if image == None and platform.is_imageconfig_needed(IMG_ID):
-        serv = servs.pop(0)
+        serv:Container = servs.pop(0)
         serv_logger.info(" Creando la imagen base de los servidores...")
         msg = (f" Contenedor usado para crear imagen " + 
             f"de servidores -> '{serv}'")
         serv_logger.debug(msg)
         # Lanzamos el contenedor e instalamos tomcat8
         containers.init(serv); containers.start(serv)
+        # Rearrancamos por si acaso para evitar fallos al instalar
         serv_logger.info(f" Configurando {serv.tag} '{serv}'...")
         serv_logger.info(" Instalando tomcat8 (puede tardar)...")
         try:
