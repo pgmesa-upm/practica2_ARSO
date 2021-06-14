@@ -36,14 +36,13 @@ class Command:
         self.extra_arg = extra_arg
         self.choices = choices
         self.default = default
-        if description is None:
-            description = ""
         self.description = description 
         self.mandatory = mandatory
         self.multi = multi
         self.mandatory_opt = mandatory_opt
         self.multi_opt = multi_opt
         self.options = {}
+        self.flags = {}
    
     def define_option(self, name:str, extra_arg:any=False, mandatory=False, 
                    multi=False, choices:list=None, default:any=None,
@@ -65,6 +64,9 @@ class Command:
     
     def add_option(self, opt):
         self.options[opt.name] = opt
+    
+    def add_flag(self, flag):
+        self.flags[flag.name] = flag
      
     def __str__(self) -> str:
         """Define como se va a representar el comando en forma
@@ -98,9 +100,7 @@ class Flag:
                  description:str=None):
         self.name = name
         self.ncwf = notCompatibleWithFlags + [self.name]
-        if description is None:
-            description = ""
-        self.description = description 
+        self.description = description
         
     def __str__(self) -> str:
         """Define como se va a representar el flag en forma

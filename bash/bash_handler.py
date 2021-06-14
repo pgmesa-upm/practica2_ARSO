@@ -47,7 +47,7 @@ def config_cli() -> Cli:
     # ++++++++++++++++++++++++++++
     servs = get_servs_cmd()
     cli.add_command(servs)
-    _commands[servs.name] = commands_rep.servs
+    #_commands[servs.name] = commands_rep.servs
      # ++++++++++++++++++++++++++++
     repo = get_repo_cmd()
     cli.add_command(repo)
@@ -168,7 +168,7 @@ def _def_platform_cmds(cli:Cli):
         cmd_name, description=msg, 
         extra_arg=True, mandatory=True
     )
-    publish.add_option(
+    publish.define_option(
         "--alias", description="allows to specify the alias of the image",
         extra_arg=True, mandatory=True
     )
