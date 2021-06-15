@@ -48,8 +48,21 @@ def _def_run_opt():
         "run", description=msg, 
         extra_arg=True, multi=True
     )
+    # ----------------------------
     run.add_option(reused_opts["--skip"])
-    run.add_flag(reused_flags["-l"])
+    # ----------------------------
+    msg = """ 
+    <app_name> allows to specify the app that will be deployed
+    in the servers
+    """
+    use = Option(
+        "--use", description=msg, 
+        extra_arg=True, mandatory=True
+    )
+    run.add_option(use)
+    # ----------------------------
+    run.add_flag(reused_flags["-m"])
+    run.add_flag(reused_flags["-t"])
     return run
  
 # --------------------------------------------------------------------   
@@ -87,21 +100,39 @@ def _def_add_opt():
         "add", description=msg,
         extra_arg=True, default=1, choices=[1,2,3,4,5]
     )
+    # ----------------------------
     name = reused_opts["--name"]
     add.add_option(name)
+    # ----------------------------
     add.define_option(
         "--image", description="allows to specify the image",
         extra_arg=True, mandatory=True, multi=True
     )
+    # ----------------------------
+    msg = """ 
+    <app_name> allows to specify the app that will be deployed
+    in the servers (if they are being runned)
+    """
+    use = Option(
+        "--use", description=msg, 
+        extra_arg=True, mandatory=True
+    )
+    add.add_option(use)
+    # ----------------------------
+    add.add_flag(reused_flags["-l"])
+    add.add_flag(reused_flags["-m"])
+    add.add_flag(reused_flags["-t"])
     return add
 
 # --------------------------------------------------------------------
 def _def_remove_opt():
-    msg = """<server_names> deletes the servers specified"""
+    msg = """<void or server_names> deletes the servers specified.
+    If void all are deleted"""
     remove = Command(
         "rm", description=msg,
-        extra_arg=True, mandatory=True, multi=True
+        extra_arg=True, multi=True
     )
+    remove.add_option(reused_opts["--skip"])
     return remove
 
 # --------------------------------------------------------------------

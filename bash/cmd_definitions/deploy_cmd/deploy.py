@@ -41,8 +41,12 @@ def get_deploy_cmd():
     # ++++++++++++++++++++++++++++
     climage = _def_climage_opt()
     deploy.add_option(climage)
+    # ++++++++++++++++++++++++++++
+    use = _def_use_opt()
+    deploy.add_option(use)
     # Flags ---------------------- 
     deploy.add_flag(reused_flags["-l"])
+    deploy.add_flag(reused_flags["-t"])
     
     return deploy
 
@@ -130,3 +134,14 @@ def _def_climage_opt():
         extra_arg=True, mandatory=True
     )
     return climage
+
+def _def_use_opt():
+    msg = """ 
+    <app_name> allows to specify the app that will be deployed
+    in the servers (if they are being runned)
+    """
+    use = Option(
+        "--use", description=msg, 
+        extra_arg=True, mandatory=True
+    )
+    return use

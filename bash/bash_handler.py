@@ -1,11 +1,19 @@
 
+from program.controllers.containers import delete
 import bash.cmd_functions.commands as commands_rep
 from dependencies.cli.cli import Cli, CmdLineError
 from dependencies.cli.aux_classes import Command, Flag, Option
 
 from .cmd_definitions.deploy_cmd.deploy import get_deploy_cmd
+from .cmd_definitions.start_cmd.start import get_start_cmd
+from .cmd_definitions.stop_cmd.stop import get_stop_cmd
+from .cmd_definitions.pause_cmd.pause import get_pause_cmd
+from .cmd_definitions.delete_cmd.delete import get_delete_cmd
+from .cmd_definitions.destroy_cmd.destroy import get_destroy_cmd
 from .cmd_definitions.servs_cmd.servs import get_servs_cmd
 from .cmd_definitions.repo_cmd.repo import get_repo_cmd
+
+
 from .cmd_definitions.reused_definitions import def_reused_definitions
 from .cmd_functions import commands as commands_rep
 
@@ -28,6 +36,7 @@ def execute(cmd_line:dict):
         args (dict): Linea de comandos introducida por el usuario 
             ya validada, es decir, debe ser correcta
     """
+    return
     for cmd_name, cmd in _commands.items():
         if cmd_name == cmd_line["cmd"]:
             args = cmd_line["args"]
@@ -43,7 +52,27 @@ def config_cli() -> Cli:
     # ++++++++++++++++++++++++++++
     deploy = get_deploy_cmd()
     cli.add_command(deploy)
-    _commands[deploy.name] = commands_rep.deploy
+    #_commands[deploy.name] = commands_rep.deploy
+    # ++++++++++++++++++++++++++++
+    start = get_start_cmd()
+    cli.add_command(start)
+    #_commands[start.name] = commands_rep.start
+    # ++++++++++++++++++++++++++++
+    stop = get_stop_cmd()
+    cli.add_command(stop)
+    #_commands[stop.name] = commands_rep.stop
+    # ++++++++++++++++++++++++++++
+    pause = get_pause_cmd()
+    cli.add_command(pause)
+    _commands[pause.name] = commands_rep.pause
+    # ++++++++++++++++++++++++++++
+    delete = get_delete_cmd()
+    cli.add_command(delete)
+    #_commands[delete.name] = commands_rep.delete
+    # ++++++++++++++++++++++++++++
+    destroy = get_destroy_cmd()
+    cli.add_command(destroy)
+    #_commands[destroy.name] = commands_rep.destroy
     # ++++++++++++++++++++++++++++
     servs = get_servs_cmd()
     cli.add_command(servs)
@@ -52,18 +81,14 @@ def config_cli() -> Cli:
     repo = get_repo_cmd()
     cli.add_command(repo)
     # _commands[servs.name] = commands_rep.servs
-     # ++++++++++++++++++++++++++++
-    # _def_loadbalancer_cmds(cli)
-    # _def_database_cmds(cli)
-    # _def_client_cmds(cli)
+    # ++++++++++++++++++++++++++++
     # ---------------- Global Flags
     msg = """ 
     'warning mode', only shows warning and error msgs during 
     execution
     """
     verbosity = Flag(
-        "-w", description=msg,
-        notCompatibleWithFlags=["-d"]
+        "-w", description=msg,notCompatibleWithFlags=["-d"]
     )
     cli.add_global_flag(verbosity)
     # -----------------------------
@@ -72,8 +97,7 @@ def config_cli() -> Cli:
     execution
     """
     debugging = Flag(
-        "-d", description=msg, 
-        notCompatibleWithFlags=["-w"]
+        "-d", description=msg, notCompatibleWithFlags=["-w"]
     )
     cli.add_global_flag(debugging)
     # -----------------------------
@@ -82,8 +106,7 @@ def config_cli() -> Cli:
     when an error occurs)
     """
     quiet = Flag(
-        "-q", description=msg, 
-        notCompatibleWithFlags=["-w","-d"],
+        "-q", description=msg, notCompatibleWithFlags=["-w","-d"],
     )
     cli.add_global_flag(quiet)
     # -----------------------------
@@ -95,56 +118,15 @@ def config_cli() -> Cli:
     
     return cli
 
+
+
+
+
+
+
+
 def _def_platform_cmds(cli:Cli):
     global _commands
-    
-    # ++++++++++++++++++++++++++++
-    cmd_name = "start"
-    msg = """ 
-    <void or container_names> runs the containers specified, if 
-    void all containers are runned
-    """
-    start = Command(
-        cmd_name, description=msg, 
-        extra_arg=True, multi=True
-    )
-    cli.add_command(start)
-    _commands[cmd_name] = commands_rep.start
-    
-    # ++++++++++++++++++++++++++++
-    cmd_name = "stop"
-    msg = """ 
-    <void or container_names> stops the containers currently
-    running, if void all containers are stopped
-    """
-    stop = Command(
-        cmd_name, description=msg, 
-        extra_arg=True, multi=True
-    )
-    cli.add_command(stop)
-    _commands[cmd_name] = commands_rep.stop
-    
-    # ++++++++++++++++++++++++++++
-    cmd_name = "destroy"
-    msg = """ 
-    deletes every component of the platform created
-    """
-    destroy = Command(cmd_name, description=msg)
-    cli.add_command(destroy)
-    _commands[cmd_name] = commands_rep.destroy
-
-    # ++++++++++++++++++++++++++++
-    cmd_name = "pause"
-    msg = """ 
-    <void or container_names> pauses the containers currently 
-    running, if void all containers are paused
-    """
-    pause = Command(
-        cmd_name, description=msg, 
-        extra_arg=True, multi=True
-    )
-    cli.add_command(pause)
-    _commands[cmd_name] = commands_rep.pause
     
     # ++++++++++++++++++++++++++++
     cmd_name = "show"
@@ -240,55 +222,15 @@ def _config_cli() -> Cli:
     # ++++++++++++++++++++++++++++
     
     
-    # ++++++++++++++++++++++++++++
-    cmd_name = "add"
-    msg = """ 
-    <integer between(1-5)> adds the number of servers specified 
-    (the program can't surpass 5 servers)
-    """
-    add = Command(
-        cmd_name, description=msg, 
-        extra_arg=True, choices=[1,2,3,4,5], mandatory=True
-    )
-    # -------------
-    msg = """ 
-    <server_names> allows to specify the name of the servers, by 
-    default 's_' is given to each server
-    """
-    add.define_option(
-        "--name", description=msg, 
-        extra_arg=True, multi=True, mandatory=True
-    )
+    
     # -------------
     msg = """ 
     adds clients instead of servers
     """
     add.define_option("-cl", description=msg)
     # -------------
-    msg = """ 
-    <alias or fingerprint> allows to specify the image
-    """
-    add.define_option(
-        "--image", description=msg, 
-        extra_arg=True, mandatory=True
-    )
-    # -------------
-    cli.add_command(add)
-    _commands[cmd_name] = commands_rep.add
     
-    # ++++++++++++++++++++++++++++
-    cmd_name = "remove"
-    msg = """ 
-    <void or container_names> deletes the containers 
-    specified, if void all containers are deleted (some 
-    may not be removable)
-    """
-    remove = Command(
-        cmd_name, description=msg, 
-        extra_arg=True,  multi=True
-    )
-    cli.add_command(remove)
-    _commands[cmd_name] = commands_rep.remove
+    
     
     # ++++++++++++++++++++++++++++
     cmd_name = "change"

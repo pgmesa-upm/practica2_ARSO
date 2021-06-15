@@ -346,7 +346,7 @@ class Cli:
             commands = [command]
         print(paint(" python3 __main__ <gflags> [command] <parameters> " + 
               "<flags> [options] <parameters> <flags> ...", colors.BOLD))
-        print(" + " + paint("Commands", colors.FAIL) + ":")
+        print(" + " + paint("Commands", colors.UNDERLINE) + ":")
         for cmd in commands:
             description = "    -> " + paint(f"'{cmd.name}' ", colors.WARNING)
             if cmd.description is not None:
@@ -360,7 +360,7 @@ class Cli:
             print(formatted)
             print_recursively(cmd, 0)
         if command is None:
-            print(" + " + paint("Global Flags", colors.FAIL) + ":")   
+            print(" + " + paint("Global Flags", colors.UNDERLINE) + ":")   
             for flag in self.global_flags.values():
                 description = f"    -> '{flag.name}' "
                 if flag.description is not None:
