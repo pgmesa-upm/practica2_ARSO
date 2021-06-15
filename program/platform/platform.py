@@ -121,7 +121,6 @@ def print_state():
             extra_pairs = []
             if c.tag == servers.TAG:
                 extra_pairs = [("base_image", "app")]
-                c.port = None
             elif c.tag == load_balancer.TAG:
                 extra_pairs = [("base_image", "algorithm")]
             print(pretty(
