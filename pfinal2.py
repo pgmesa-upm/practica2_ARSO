@@ -39,7 +39,7 @@ def main():
         args_processed = cli.process_cmdline(sys.argv)
         if args_processed == None: return
         # Configuramos la cantidad de info que se va a mostrar
-        _config_verbosity(args_processed["flags"])
+        _config_verbosity(args_processed.pop("gflags"))
         main_logger.info(" Programa iniciado")
         # Realizamos unas comprobaciones previas (ProgramError)
         program.check_dependencies()

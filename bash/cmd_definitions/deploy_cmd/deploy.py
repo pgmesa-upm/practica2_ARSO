@@ -1,6 +1,6 @@
 
 from dependencies.cli.aux_classes import Command, Flag, Option
-from ..reused_definitions import reused_opts
+from ..reused_definitions import reused_opts, reused_flags
 
 
 # --------------------------------------------------------------------
@@ -41,6 +41,8 @@ def get_deploy_cmd():
     # ++++++++++++++++++++++++++++
     climage = _def_climage_opt()
     deploy.add_option(climage)
+    # Flags ---------------------- 
+    deploy.add_flag(reused_flags["-l"])
     
     return deploy
 

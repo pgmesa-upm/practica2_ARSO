@@ -48,7 +48,7 @@ def config_cli() -> Cli:
     servs = get_servs_cmd()
     cli.add_command(servs)
     #_commands[servs.name] = commands_rep.servs
-     # ++++++++++++++++++++++++++++
+    # ++++++++++++++++++++++++++++
     repo = get_repo_cmd()
     cli.add_command(repo)
     # _commands[servs.name] = commands_rep.servs
@@ -56,6 +56,43 @@ def config_cli() -> Cli:
     # _def_loadbalancer_cmds(cli)
     # _def_database_cmds(cli)
     # _def_client_cmds(cli)
+    # ---------------- Global Flags
+    msg = """ 
+    'warning mode', only shows warning and error msgs during 
+    execution
+    """
+    verbosity = Flag(
+        "-w", description=msg,
+        notCompatibleWithFlags=["-d"]
+    )
+    cli.add_global_flag(verbosity)
+    # -----------------------------
+    msg = """ 
+    'debug mode' option for debugging. Shows debug msgs during
+    execution
+    """
+    debugging = Flag(
+        "-d", description=msg, 
+        notCompatibleWithFlags=["-w"]
+    )
+    cli.add_global_flag(debugging)
+    # -----------------------------
+    msg = """ 
+    'quiet mode', doesn't show any msg during execution (only 
+    when an error occurs)
+    """
+    quiet = Flag(
+        "-q", description=msg, 
+        notCompatibleWithFlags=["-w","-d"],
+    )
+    cli.add_global_flag(quiet)
+    # -----------------------------
+    msg = """ 
+    executes the code sequencially instead of concurrently
+    """
+    sequential_execution = Flag("-s", description=msg)
+    cli.add_global_flag(sequential_execution)
+    
     return cli
 
 def _def_platform_cmds(cli:Cli):
@@ -174,64 +211,6 @@ def _def_platform_cmds(cli:Cli):
     )
     cli.add_command(publish)
     _commands[cmd_name] = commands_rep.publish
-    
-    # ---------------------- Flags
-    # ++++++++++++++++++++++++++++
-    msg = """ 
-    'warning mode', only shows warning and error msgs during 
-    execution
-    """
-    verbosity = Flag(
-        "-w", description=msg,
-        notCompatibleWithFlags=["-d"]
-    )
-    cli.add_flag(verbosity)
-    # ++++++++++++++++++++++++++++
-    msg = """ 
-    option for debugging
-    """
-    debugging = Flag(
-        "-d", description=msg, 
-        notCompatibleWithFlags=["-w"]
-    )
-    cli.add_flag(debugging)
-    # ++++++++++++++++++++++++++++
-    msg = """ 
-    'quiet mode', doesn't show any msg during execution (only 
-    when an error occurs)
-    """
-    quiet = Flag(
-        "-q", description=msg, 
-        notCompatibleWithFlags=["-w","-d"],
-    )
-    cli.add_flag(quiet)
-    # ++++++++++++++++++++++++++++
-    msg = """ 
-    executes the action without asking confirmation
-    """
-    force = Flag("-y", description=msg)
-    cli.add_flag(force)
-    # ++++++++++++++++++++++++++++
-    msg = """ 
-    opens the terminal window of the containers that are being 
-    runned
-    """
-    terminal = Flag("-t", description=msg)
-    cli.add_flag(terminal)
-    # ++++++++++++++++++++++++++++
-    msg = """ 
-    launches the container
-    """
-    launch = Flag("-l", description=msg)
-    cli.add_flag(launch)
-    # ++++++++++++++++++++++++++++
-    msg = """ 
-    marks the servers if they are being runned
-    """
-    mark = Flag("-m", description=msg)
-    cli.add_flag(mark)
-
-
 
 
 def _def_loadbalancer_cmds(cli:Cli):
@@ -338,10 +317,6 @@ def _config_cli() -> Cli:
     _commands[cmd_name] = commands_rep.app
 
     # ++++++++++++++++++++++++++++
-    msg = """ 
-    executes the code sequencially instead of concurrently
-    """
-    concurrency = Flag("-s", description=msg)
-    cli.add_flag(concurrency)
+    
     
 # --------------------------------------------------------------------

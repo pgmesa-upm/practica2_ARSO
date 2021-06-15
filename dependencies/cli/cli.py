@@ -54,21 +54,34 @@ class Cli:
                 alguno)
         """
         args.pop(0) # Eliminamos el nombre del programa
+        processed_line = {
+            "cmd": None,"args": [], 
+            "options": {}, "flags": [],
+            "gflags": []
+        }
+        # Procesamos flags globales    
+        gflags = []
+        while len(args) > 0 and args[0] in self.global_flags:
+            gflags.append(args.pop(0))
+        if "-h" in gflags:
+            self.print_help()
+            if self.pass_on_help:
+                return None
+            gflags.remove("-h")
+        self._check_global_flags(gflags)
+        processed_line["gflags"] = gflags
         # Revisamos si alguno de los comandos validos esta en la 
         # linea de comandos introducida
-        for cmd in self.commands.values():
+        for cmd in self.commands.values():    
             if len(args) == 0:
-                err_msg = "No se han proporcionado argumentos"
+                err_msg = "No se ha introducido ningun comando"
                 raise CmdLineError(_help=(not self.printed), msg=err_msg)
             if args[0] == cmd.name:
                 try:
-                    parts = self._split_line(cmd, args)
                     # Vemos si cada parte es válida y la guardamos en 
                     # un diccionario
-                    processed_line = {
-                        "cmd": None, "args": [], "options": {}, "flags": []
-                    }
                     processed_line["cmd"] = cmd.name
+                    parts = self._split_line(cmd, args)
                     # Procesamos flags del comando
                     flags = self._check_flags(cmd, parts[cmd.name])
                     processed_line["flags"] = flags
@@ -85,9 +98,6 @@ class Cli:
                     return processed_line
                 except HelpException:
                     return None
-        if "-h" == args[0]:
-            self.print_help()
-            return
         err_msg = f"El comando '{args[0]}' no se reconoce"
         raise CmdLineError(_help=(not self.printed), msg=err_msg)
     
@@ -212,7 +222,7 @@ class Cli:
                 raise HelpException()
             args.remove("-h")
         inFlags = []
-        for arg in args:
+        for arg in args: 
             for validFlag in cmd.flags.values():
                 if arg == validFlag.name:
                     if len(inFlags) > 0:
@@ -220,7 +230,7 @@ class Cli:
                         for flag in inFlags:
                             if (flag.name in validFlag.ncwf or 
                                         validFlag.name in flag.ncwf):
-                                errmsg = (f"Las opciones '{flag}' y " + 
+                                errmsg = (f"Los flags '{flag}' y " + 
                                          f"'{validFlag}' no son compatibles")
                                 raise CmdLineError(
                                     _help=(not self.printed), msg=errmsg
@@ -232,6 +242,23 @@ class Cli:
         # entero (ya no nos hace falta)
         inFlags = list(map(lambda flag: str(flag), inFlags))
         return inFlags
+    
+    def _check_global_flags(self, args:list):
+        inFlags = []
+        for arg in args: 
+            for validFlag in self.global_flags.values():
+                if arg == validFlag.name:
+                    if len(inFlags) > 0:
+                        # Comprobamos que son flags compatibles
+                        for flag in inFlags:
+                            if (flag.name in validFlag.ncwf or 
+                                        validFlag.name in flag.ncwf):
+                                errmsg = (f"Los flags globales '{flag}' y " + 
+                                         f"'{validFlag}' no son compatibles")
+                                raise CmdLineError(
+                                    _help=(not self.printed), msg=errmsg
+                                )
+                    inFlags.append(validFlag)
       
     def print_help(self, command=None):
         """Imprime las descripciones de cada comando y flag de la cli
@@ -261,13 +288,24 @@ class Cli:
                 untabbed = string
             return untabbed 
         
+        def paint(line:str, color):
+            return color + line + colors.ENDC
+            
         def print_recursively(cmd:Command, i:int):
             cmd_options = cmd.options.values()
             extra_indent = (opt_indent-cmd_indent)*i
+            opt_color = colors.OKCYAN
+            if i%2 != 0:
+                opt_color = colors.OKBLUE
             if len(cmd_options) > 0:
-                print(" "*8*(i+1)+"- options:")
+                print(
+                    " "*8*(i+1) + "- " + 
+                    paint("options", colors.UNDERLINE) + ":"
+                )
                 for opt in cmd_options:
-                    description = f"=> '{opt.name}' "
+                    description = (
+                        "=> " + paint(f"'{opt.name}' ", opt_color)
+                    )
                     if opt.description is not None:
                         description += f"--> {opt.description}"
                     formatted = apply_shellformat(
@@ -282,9 +320,14 @@ class Cli:
                     print_recursively(opt, i+1)
             cmd_flags = cmd.flags.values()
             if len(cmd_flags) > 0:
-                print(" "*8*(i+1)+"- flags:")  
+                print(
+                    " "*8*(i+1) + "- " +
+                    paint("flags", colors.UNDERLINE) + ":"
+                )
                 for flag in cmd_flags:
-                    description = f"=> '{flag.name}' "
+                    description = (
+                        "=> " + paint(f"'{flag.name}' ", colors.OKGREEN)
+                    )
                     if flag.description is not None:
                         description += f"--> {flag.description}"
                     formatted = apply_shellformat(
@@ -296,15 +339,18 @@ class Cli:
                         indent=opt_indent+opt_first_line_diff + extra_indent
                     )
                     print(formatted)
+                    
         # ------------------------------------------------------------ 
         commands = self.commands.values()
         if command is not None:
             commands = [command]
-        print(" python3 __main__ [commands] <parameters> " + 
-                                    "[options] <parameters> [flags]")
-        print(" + Commands: ")
+        print(paint(" python3 __main__ <gflags> [command] <parameters> " + 
+              "<flags> [options] <parameters> <flags> ...", colors.BOLD))
+        print(" + " + paint("Commands", colors.FAIL) + ":")
         for cmd in commands:
-            description = f"    -> '{cmd.name}' --> {cmd.description}"
+            description = "    -> " + paint(f"'{cmd.name}' ", colors.WARNING)
+            if cmd.description is not None:
+                description += f"--> {cmd.description}"
             formatted = apply_shellformat(
                 description, indent=cmd_indent
             )
@@ -313,16 +359,19 @@ class Cli:
             )
             print(formatted)
             print_recursively(cmd, 0)
-        print(" + Global Flags: ")   
-        for flag in self.global_flags.values():
-            description = f"    -> '{flag.name}' --> {flag.description}"
-            formatted = apply_shellformat(
-                description, indent=cmd_indent
-            )
-            formatted = untab_firstline(
-                formatted, indent=cmd_indent+cmd_first_line_diff
-            )
-            print(formatted)
+        if command is None:
+            print(" + " + paint("Global Flags", colors.FAIL) + ":")   
+            for flag in self.global_flags.values():
+                description = f"    -> '{flag.name}' "
+                if flag.description is not None:
+                    description += f"--> {flag.description}"
+                formatted = apply_shellformat(
+                    description, indent=cmd_indent
+                )
+                formatted = untab_firstline(
+                    formatted, indent=cmd_indent+cmd_first_line_diff
+                )
+                print(formatted)
 
 # -------------------------------------------------------------------- 
 class CmdLineError(Exception):
@@ -338,3 +387,14 @@ class CmdLineError(Exception):
 # --------------------------------------------------------------------
 class HelpException(Exception):
     pass
+# --------------------------------------------------------------------
+class colors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'

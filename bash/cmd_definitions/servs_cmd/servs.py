@@ -1,6 +1,6 @@
 
 from dependencies.cli.aux_classes import Command, Flag, Option
-from ..reused_definitions import reused_opts
+from ..reused_definitions import reused_opts, reused_flags
 
 # --------------------------------------------------------------------
 def get_servs_cmd():
@@ -49,6 +49,7 @@ def _def_run_opt():
         extra_arg=True, multi=True
     )
     run.add_option(reused_opts["--skip"])
+    run.add_flag(reused_flags["-l"])
     return run
  
 # --------------------------------------------------------------------   
