@@ -4,17 +4,17 @@ import bash.cmd_functions.commands as commands_rep
 from dependencies.cli.cli import Cli, CmdLineError
 from dependencies.cli.aux_classes import Command, Flag, Option
 
-from .cmd_definitions.deploy_cmd.deploy import get_deploy_cmd
-from .cmd_definitions.start_cmd.start import get_start_cmd
-from .cmd_definitions.stop_cmd.stop import get_stop_cmd
-from .cmd_definitions.pause_cmd.pause import get_pause_cmd
-from .cmd_definitions.delete_cmd.delete import get_delete_cmd
-from .cmd_definitions.destroy_cmd.destroy import get_destroy_cmd
-from .cmd_definitions.servs_cmd.servs import get_servs_cmd
-from .cmd_definitions.repo_cmd.repo import get_repo_cmd
+from .commands.deploy_cmd.deploy import get_deploy_cmd, deploy
+from .commands.start_cmd.start import get_start_cmd, start
+from .commands.stop_cmd.stop import get_stop_cmd, stop
+from .commands.pause_cmd.pause import get_pause_cmd, pause
+from .commands.delete_cmd.delete import get_delete_cmd, delete
+from .commands.destroy_cmd.destroy import get_destroy_cmd, destroy
+from .commands.servs_cmd.servs import get_servs_cmd, servs
+from .commands.repo_cmd.repo import get_repo_cmd, repo
 
 
-from .cmd_definitions.reused_definitions import def_reused_definitions
+from .commands.reused_definitions import def_reused_definitions
 from .cmd_functions import commands as commands_rep
 
 # --------------------------- BASH HANDLER ---------------------------
@@ -25,8 +25,6 @@ from .cmd_functions import commands as commands_rep
 
 # En este diccionario se asocia a cada comando una funcion a ejecutar
 _commands = {}
-# Opciones reutilizadas por varios comandos
-_reused_opts = {}
 # --------------------------------------------------------------------
 def execute(cmd_line:dict):
     """Ejecuta la funcion correspondiente al comando introducido por 
@@ -36,13 +34,16 @@ def execute(cmd_line:dict):
         args (dict): Linea de comandos introducida por el usuario 
             ya validada, es decir, debe ser correcta
     """
+    print(cmd_line)
     return
-    for cmd_name, cmd in _commands.items():
-        if cmd_name == cmd_line["cmd"]:
-            args = cmd_line["args"]
-            options = cmd_line["options"]
-            flags = cmd_line["flags"]
-            cmd(*args, options=options, flags=flags)
+    cmd_passed = cmd_line["_cmd_"]
+    for cmd_name, func in _commands.items():
+        if cmd_name == cmd_line["_cmd_"]:
+            cmd_info = cmd_line.pop(cmd_passed)
+            args = cmd_info["args"]
+            options = cmd_info["options"]
+            flags = cmd_info["flags"]
+            func(*args, options=options, flags=flags)
             break
         
 # --------------------------------------------------------------------
@@ -50,37 +51,37 @@ def config_cli() -> Cli:
     cli = Cli()
     def_reused_definitions()
     # ++++++++++++++++++++++++++++
-    deploy = get_deploy_cmd()
-    cli.add_command(deploy)
-    #_commands[deploy.name] = commands_rep.deploy
+    deploy_cmd = get_deploy_cmd()
+    cli.add_command(deploy_cmd)
+    _commands[deploy_cmd.name] = deploy
     # ++++++++++++++++++++++++++++
-    start = get_start_cmd()
-    cli.add_command(start)
-    #_commands[start.name] = commands_rep.start
+    start_cmd = get_start_cmd()
+    cli.add_command(start_cmd)
+    _commands[start_cmd.name] = start
     # ++++++++++++++++++++++++++++
-    stop = get_stop_cmd()
-    cli.add_command(stop)
-    #_commands[stop.name] = commands_rep.stop
+    stop_cmd = get_stop_cmd()
+    cli.add_command(stop_cmd)
+    _commands[stop_cmd.name] = stop
     # ++++++++++++++++++++++++++++
-    pause = get_pause_cmd()
-    cli.add_command(pause)
-    _commands[pause.name] = commands_rep.pause
+    pause_cmd = get_pause_cmd()
+    cli.add_command(pause_cmd)
+    _commands[pause_cmd.name] = pause
     # ++++++++++++++++++++++++++++
-    delete = get_delete_cmd()
-    cli.add_command(delete)
-    #_commands[delete.name] = commands_rep.delete
+    delete_cmd = get_delete_cmd()
+    cli.add_command(delete_cmd)
+    _commands[delete_cmd.name] = delete
     # ++++++++++++++++++++++++++++
-    destroy = get_destroy_cmd()
-    cli.add_command(destroy)
-    #_commands[destroy.name] = commands_rep.destroy
+    destroy_cmd = get_destroy_cmd()
+    cli.add_command(destroy_cmd)
+    _commands[destroy_cmd.name] = destroy
     # ++++++++++++++++++++++++++++
-    servs = get_servs_cmd()
-    cli.add_command(servs)
-    #_commands[servs.name] = commands_rep.servs
+    servs_cmd = get_servs_cmd()
+    cli.add_command(servs_cmd)
+    _commands[servs_cmd.name] = servs
     # ++++++++++++++++++++++++++++
-    repo = get_repo_cmd()
-    cli.add_command(repo)
-    # _commands[servs.name] = commands_rep.servs
+    repo_cmd = get_repo_cmd()
+    cli.add_command(repo_cmd)
+    _commands[repo_cmd.name] = repo
     # ++++++++++++++++++++++++++++
     # ---------------- Global Flags
     msg = """ 

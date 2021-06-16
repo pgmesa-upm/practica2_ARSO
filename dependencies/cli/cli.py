@@ -1,4 +1,6 @@
 
+from contextlib import suppress
+
 from .aux_classes import Command, Flag
 from .cli_utils import format_str
 
@@ -54,11 +56,7 @@ class Cli:
                 alguno)
         """
         args.pop(0) # Eliminamos el nombre del programa
-        processed_line = {
-            "cmd": None,"args": [], 
-            "options": {}, "flags": [],
-            "gflags": []
-        }
+        processed_line = {"_cmd_": None, "gflags": []}
         # Procesamos flags globales    
         gflags = []
         while len(args) > 0 and args[0] in self.global_flags:
@@ -77,77 +75,85 @@ class Cli:
                 err_msg = "No se ha introducido ningun comando"
                 raise CmdLineError(_help=(not self.printed), msg=err_msg)
             if args[0] == cmd.name:
+                args.remove(cmd.name)
+                # Procesamos los argumentos pasados al comando principal
+                processed_line["_cmd_"] = cmd.name
                 try:
-                    # Vemos si cada parte es válida y la guardamos en 
-                    # un diccionario
-                    processed_line["cmd"] = cmd.name
-                    parts = self._split_line(cmd, args)
-                    # Procesamos flags del comando
-                    flags = self._check_flags(cmd, parts[cmd.name])
-                    processed_line["flags"] = flags
-                    # Procesamos parametros del comando
-                    self._check_opt_restrictions(cmd, parts)
-                    params = self._check_command(cmd, parts.pop(cmd.name))
-                    processed_line["args"] = params
-                    # Procesamos las opciones del comando principal y de cada
-                    # opcion de forma recursiva
-                    for opt_name in parts:
-                        opt = cmd.options[opt_name]
-                        options = self._process_options(opt, parts[opt_name])
-                        processed_line["options"][opt_name] = options
+                    processed_line[cmd.name] = self._process_cmd(cmd, args)
                     return processed_line
                 except HelpException:
                     return None
         err_msg = f"El comando '{args[0]}' no se reconoce"
         raise CmdLineError(_help=(not self.printed), msg=err_msg)
     
-    def _process_options(self, opt:Command, args:list):
-        parts = self._split_line(opt, [opt.name] + args)
-        processed_line = {"args": [], "options": {}, "flags": []}
-        # Procesamos flags de la opcion
-        flags = self._check_flags(opt, parts[opt.name])
+    def _process_cmd(self, cmd:Command, args:list):
+        processed_line = { 
+            "args": [], "options": {}, "flags": [], "nested_cmds": {},
+        }
+        params, options, nested_cmds = self._split_line(cmd, args)
+        print(params, options, nested_cmds)
+        # Procesamos flags del comando
+        flags = self._check_flags(cmd, params)
         processed_line["flags"] = flags
-        # Procesamos parametros de la opcion
-        self._check_opt_restrictions(opt, parts)
-        params = self._check_command(opt, parts.pop(opt.name))
+        # Procesamos parametros del comando
+        params = self._check_valid_params(cmd, params)
         processed_line["args"] = params
-        for opt_name in parts:
-            sub_opt = opt.options[opt_name]
-            options = self._process_options(sub_opt, parts[opt_name])
-            processed_line["options"][sub_opt.name] = options
+        # Procesamos las opciones del comando
+        self._check_opt_restrictions(cmd, options)
+        for opt_name, opt_params in options.items():
+            opt = cmd.options[opt_name]
+            opt_params = self._check_valid_params(opt, opt_params)
+            processed_line["options"][opt_name] = opt_params
+        # Procesamos los comandos anidados de forma recursiva
+        for cmd_name, nested_args in nested_cmds.items():
+            nested_cmd = cmd.nested_cmds[cmd_name]
+            processed_line["nested_cmds"][cmd_name] = (
+                self._process_cmd(nested_cmd, nested_args)
+            )
         return processed_line
     
     def _split_line(self, cmd:Command, args:list) -> dict:
         # Separamos por partes la linea de comandos
-        ant = args[0]; parts = {ant: ""}; last_index = 1
+        ant = None; last_index = 1
+        params = []; opts = {}; nested_cmds = {} 
         for i, arg in enumerate(args):
-            if arg in cmd.options:
-                if arg in parts or arg == ant:
-                    msg = f"El comando '{ant}' esta repetido"
+            if arg in cmd.nested_cmds:
+                if ant is not None:
+                    opts[ant] = args[last_index:i]
+                nested_cmds[arg] = args[i+1:]
+                break
+            elif arg in cmd.options:
+                if arg in opts or arg == ant:
+                    msg = f"La opcion '{ant}' esta repetida"
                     raise CmdLineError(_help=(not self.printed), msg=msg)
-                parts[ant] = args[last_index:i]
+                if ant is not None:
+                    opts[ant] = args[last_index:i]
                 last_index = i + 1
-                ant = arg       
-        parts[ant] = args[last_index:]
-        return parts
+                ant = arg 
+            elif ant is None:
+                params.append(arg) 
+        else:
+            if ant is not None:
+                opts[ant] = args[last_index:]
+        return params, opts, nested_cmds
       
-    def _check_opt_restrictions(self, cmd:Command, parts:dict):
+    def _check_opt_restrictions(self, cmd:Command, options:dict):
         # Comprobamos si puede haber mas de una opcion y si es
         # obligatorio que haya al menos una
         option_names = ""
         for opt in cmd.options.values():
             option_names += opt.name + ", "
-        if len(parts) <= 1 and cmd.mandatory_opt: 
+        if len(options) <= 1 and cmd.mandatory_opt: 
             err = (f"El comando '{cmd.name}' requiere una opcion " + 
                 f"extra '{option_names[:-2]}'")
             raise CmdLineError(_help=(not self.printed), msg=err)
-        elif len(parts) > 2 and not cmd.multi_opt:
+        elif len(options) > 2 and not cmd.multi_opt:
             err = (f"El comando '{cmd.name}' solo admite una " +
                 f"opcion extra entre '{option_names[:-2]}'")
             raise CmdLineError(_help=(not self.printed), msg=err)
           
       
-    def _check_command(self, cmd:Command, params:list) -> list:
+    def _check_valid_params(self, cmd:Command, params:list) -> list:
         """Revisa si los parametro que se han pasado a un comando 
         (puede ser una opcion de un comando) son validos o si no se 
         le han pasado parametros y el comando los requeria.
@@ -265,7 +271,7 @@ class Cli:
         de forma estructurada"""
         self.printed = True
         # ------------------ Parametros a modificar ------------------
-        maxline_length = 100; cmd_indent = 4; opt_indent = 12
+        maxline_length = 90; cmd_indent = 4; opt_indent = 12
         cmd_first_line_diff = 10; opt_first_line_diff = 10
         # -------------------- FUNCIONES INTERNAS --------------------
         def apply_shellformat(string:str, indent:int=4):
@@ -292,22 +298,19 @@ class Cli:
             return color + line + colors.ENDC
             
         def print_recursively(cmd:Command, i:int):
-            cmd_options = cmd.options.values()
+            nested_cmds = cmd.nested_cmds.values()
             extra_indent = (opt_indent-cmd_indent)*i
-            opt_color = colors.OKCYAN
-            if i%2 != 0:
-                opt_color = colors.OKBLUE
-            if len(cmd_options) > 0:
+            if len(nested_cmds) > 0:
                 print(
                     " "*8*(i+1) + "- " + 
-                    paint("options", colors.UNDERLINE) + ":"
+                    paint("commands", colors.UNDERLINE) + ":"
                 )
-                for opt in cmd_options:
+                for n_cmd in nested_cmds:
                     description = (
-                        "=> " + paint(f"'{opt.name}' ", opt_color)
+                        "=> " + paint(f"'{n_cmd.name}' ", colors.OKCYAN)
                     )
-                    if opt.description is not None:
-                        description += f"--> {opt.description}"
+                    if n_cmd.description is not None:
+                        description += f"--> {n_cmd.description}"
                     formatted = apply_shellformat(
                         description, 
                         indent=opt_indent + extra_indent
@@ -317,28 +320,35 @@ class Cli:
                         indent=opt_indent+opt_first_line_diff + extra_indent
                     )
                     print(formatted)
-                    print_recursively(opt, i+1)
-            cmd_flags = cmd.flags.values()
-            if len(cmd_flags) > 0:
-                print(
-                    " "*8*(i+1) + "- " +
-                    paint("flags", colors.UNDERLINE) + ":"
-                )
-                for flag in cmd_flags:
-                    description = (
-                        "=> " + paint(f"'{flag.name}' ", colors.OKGREEN)
+                    print_recursively(n_cmd, i+1)
+            for j in range(2):
+                header = "options"
+                array = cmd.options.values()
+                color = colors.OKBLUE
+                if j == 1:
+                    header = "flags"
+                    array = cmd.flags.values()
+                    color = colors.OKGREEN
+                if len(array) > 0:
+                    print(
+                        " "*8*(i+1) + "- " +
+                        paint(header, colors.UNDERLINE) + ":"
                     )
-                    if flag.description is not None:
-                        description += f"--> {flag.description}"
-                    formatted = apply_shellformat(
-                        description, 
-                        indent=opt_indent + extra_indent
-                    )
-                    formatted = untab_firstline(
-                        formatted, 
-                        indent=opt_indent+opt_first_line_diff + extra_indent
-                    )
-                    print(formatted)
+                    for flag in array:
+                        description = (
+                            "=> " + paint(f"'{flag.name}' ", color)
+                        )
+                        if flag.description is not None:
+                            description += f"--> {flag.description}"
+                        formatted = apply_shellformat(
+                            description, 
+                            indent=opt_indent + extra_indent
+                        )
+                        formatted = untab_firstline(
+                            formatted, 
+                            indent=opt_indent+opt_first_line_diff + extra_indent
+                        )
+                        print(formatted)
                     
         # ------------------------------------------------------------ 
         commands = self.commands.values()
@@ -362,7 +372,7 @@ class Cli:
         if command is None:
             print(" + " + paint("Global Flags", colors.UNDERLINE) + ":")   
             for flag in self.global_flags.values():
-                description = f"    -> '{flag.name}' "
+                description = "    -> " + paint(f"'{flag.name}' ", colors.WARNING)
                 if flag.description is not None:
                     description += f"--> {flag.description}"
                 formatted = apply_shellformat(

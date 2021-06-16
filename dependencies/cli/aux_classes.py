@@ -43,29 +43,32 @@ class Command:
         self.multi_opt = multi_opt
         self.options = {}
         self.flags = {}
+        self.nested_cmds = {}
+        
+    def nest_cmd(self, cmd):
+        """AAnido un comando en el comando principal
+
+        Args:
+            cmd ([type]): [description]
+        """
+        if type(self) == Option:
+            msg = ("No esta permitido que las opciones tengan " + 
+            "otras opciones anidadas")
+            raise CmdDefinitionError(msg)
+        self.nested_cmds[cmd.name] = cmd
    
-    def define_option(self, name:str, extra_arg:any=False, mandatory=False, 
-                   multi=False, choices:list=None, default:any=None,
-                   description:str=None):
-        """Añade una opcion al comando. Una opcion es basicamente un 
-        comando anidado dentro de otro, que necesita la existencia
-        del comando principal para que este sea valido. Por eso los 
-        parametros para definir una opcion son los mismos que para 
-        definir un comando"""
-        self.options[name] = Command(
-            name,
-            extra_arg=extra_arg, 
-            mandatory=mandatory, 
-            multi=multi,
-            choices=choices, 
-            default=default, 
-            description=description
-        )
-    
-    def add_option(self, opt):
-        self.options[opt.name] = opt
-    
+    def add_option(self, option):
+        if type(self) == Option:
+            msg = ("No esta permitido que las opciones tengan " + 
+            "comandos anidados")
+            raise CmdDefinitionError(msg)
+        self.options[option.name] = option
+        
     def add_flag(self, flag):
+        if type(self) == Option:
+            msg = ("No esta permitido que las opciones tengan " + 
+            "flags aninados")
+            raise CmdDefinitionError(msg)
         self.flags[flag.name] = flag
      
     def __str__(self) -> str:
@@ -76,12 +79,17 @@ class Command:
             str: reperesentacion del objeto en forma string
         """
         return self.name 
-
-# Se crea esta clase simplemente para que al definir los comandos se poueda
-# distinguir a simple vista que va a ser una opcion y que un comando aunque 
-# en la practica son exactamente lo mismo
+    
+# --------------------------------------------------------------------  
 class Option(Command):
-    pass
+    """Una opcion es un comando especial que no puede tener comandos 
+        anidados y que permite aportar funcionalidades al comando principal"""
+    def __init__(self, name:str, extra_arg:any=False, mandatory=False,
+                 multi=False, choices:list=None, default:any=None,
+                 description:str=None):
+        super().__init__(
+            name, extra_arg=extra_arg, mandatory=mandatory, multi=multi,
+            choices=choices, default=default, description=description)
     
 # --------------------------------------------------------------------     
 class Flag:
@@ -110,3 +118,7 @@ class Flag:
             str: reperesentacion del objeto en forma string
         """
         return self.name 
+
+# --------------------------------------------------------------------
+class CmdDefinitionError(Exception):
+    pass
