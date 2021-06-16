@@ -99,14 +99,18 @@ class Cli:
         params = self._check_valid_params(cmd, params)
         processed_line["args"] = params
         # Procesamos las opciones del comando
-        self._check_opt_restrictions(cmd, options)
         for opt_name, opt_params in options.items():
             opt = cmd.options[opt_name]
             opt_params = self._check_valid_params(opt, opt_params)
             processed_line["options"][opt_name] = opt_params
         # Procesamos los comandos anidados de forma recursiva
+        if len(nested_cmds) == 0 and cmd.mnc:
+            err = (f"El comando '{cmd.name}' requiere un comando extra "
+                   f"-> {list(cmd.nested_cmds.keys())}")
+            raise CmdLineError(_help=(not self.printed), msg=err)
         for cmd_name, nested_args in nested_cmds.items():
             nested_cmd = cmd.nested_cmds[cmd_name]
+           
             processed_line["nested_cmds"][cmd_name] = (
                 self._process_cmd(nested_cmd, nested_args)
             )
@@ -137,22 +141,6 @@ class Cli:
                 opts[ant] = args[last_index:]
         return params, opts, nested_cmds
       
-    def _check_opt_restrictions(self, cmd:Command, options:dict):
-        # Comprobamos si puede haber mas de una opcion y si es
-        # obligatorio que haya al menos una
-        option_names = ""
-        for opt in cmd.options.values():
-            option_names += opt.name + ", "
-        if len(options) <= 1 and cmd.mandatory_opt: 
-            err = (f"El comando '{cmd.name}' requiere una opcion " + 
-                f"extra '{option_names[:-2]}'")
-            raise CmdLineError(_help=(not self.printed), msg=err)
-        elif len(options) > 2 and not cmd.multi_opt:
-            err = (f"El comando '{cmd.name}' solo admite una " +
-                f"opcion extra entre '{option_names[:-2]}'")
-            raise CmdLineError(_help=(not self.printed), msg=err)
-          
-      
     def _check_valid_params(self, cmd:Command, params:list) -> list:
         """Revisa si los parametro que se han pasado a un comando 
         (puede ser una opcion de un comando) son validos o si no se 
@@ -173,33 +161,33 @@ class Cli:
                 devuelve como int y no como str
         """
         if len(params) > 0:
-            if len(params) > 1 and not cmd.multi: 
-                err_msg = ("No se permite mas de 1 opcion extra " +
-                          f"en el comando '{cmd.name}'. Comandos " +
+            if not cmd.extra_arg:
+                err_msg = (f"El comando '{cmd.name}' no admite " + 
+                            f"parametros extra. Argumentos incorrectos " + 
+                            f"-> {params}")
+                raise CmdLineError(_help=(not self.printed), msg=err_msg)
+            elif len(params) > 1 and not cmd.multi: 
+                err_msg = ("No se permite mas de 1 parametro extra " +
+                          f"en el comando '{cmd.name}'. Argumentos " +
                           f"incorrectos -> {params[1:]}")
                 raise CmdLineError(_help=(not self.printed), msg=err_msg)
-            if cmd.extra_arg:
-                extra_args = []
-                for extra in params:
-                    try:
-                        extra_args.append(int(extra))
-                    except:
-                        extra_args.append(extra)
-                if cmd.choices == None:
-                    return extra_args
-                # Todos los extra args deben estar en choices
-                for extra in extra_args:
-                    if extra not in cmd.choices:
-                        break
-                # Si completa el bucle es que todos son validos
-                else:
-                    return extra_args
-                err_msg = f"El parametro extra '{params[0]}' no es valido"
-                raise CmdLineError(_help=(not self.printed), msg=err_msg)
+            extra_args = []
+            for extra in params:
+                try:
+                    extra_args.append(int(extra))
+                except:
+                    extra_args.append(extra)
+            if cmd.choices == None:
+                return extra_args
+            # Todos los extra args deben estar en choices
+            for extra in extra_args:
+                if extra not in cmd.choices:
+                    break
+            # Si completa el bucle es que todos son validos
             else:
-                err_msg = (f"El comando '{cmd.name}' no admite " + 
-                                            f"parametros extra {params}")
-                raise CmdLineError(_help=(not self.printed), msg=err_msg)
+                return extra_args
+            err_msg = f"El parametro extra '{params[0]}' no es valido"
+            raise CmdLineError(_help=(not self.printed), msg=err_msg)
         elif not cmd.default == None:
             return [cmd.default]
         elif not cmd.mandatory:
@@ -306,9 +294,7 @@ class Cli:
                     paint("commands", colors.UNDERLINE) + ":"
                 )
                 for n_cmd in nested_cmds:
-                    description = (
-                        "=> " + paint(f"'{n_cmd.name}' ", colors.OKCYAN)
-                    )
+                    description = f"=> {n_cmd.name} "
                     if n_cmd.description is not None:
                         description += f"--> {n_cmd.description}"
                     formatted = apply_shellformat(
@@ -318,6 +304,9 @@ class Cli:
                     formatted = untab_firstline(
                         formatted, 
                         indent=opt_indent+opt_first_line_diff + extra_indent
+                    )
+                    formatted = formatted.replace(
+                        n_cmd.name, paint(n_cmd.name, colors.OKCYAN), 1
                     )
                     print(formatted)
                     print_recursively(n_cmd, i+1)
@@ -334,12 +323,10 @@ class Cli:
                         " "*8*(i+1) + "- " +
                         paint(header, colors.UNDERLINE) + ":"
                     )
-                    for flag in array:
-                        description = (
-                            "=> " + paint(f"'{flag.name}' ", color)
-                        )
-                        if flag.description is not None:
-                            description += f"--> {flag.description}"
+                    for elem in array:
+                        description = f"=> {elem.name} "
+                        if elem.description is not None:
+                            description += f"--> {elem.description}"
                         formatted = apply_shellformat(
                             description, 
                             indent=opt_indent + extra_indent
@@ -347,6 +334,9 @@ class Cli:
                         formatted = untab_firstline(
                             formatted, 
                             indent=opt_indent+opt_first_line_diff + extra_indent
+                        )
+                        formatted = formatted.replace(
+                            elem.name, paint(elem.name, color), 1
                         )
                         print(formatted)
                     
@@ -358,7 +348,7 @@ class Cli:
               "<flags> [options] <parameters> <flags> ...", colors.BOLD))
         print(" + " + paint("Commands", colors.UNDERLINE) + ":")
         for cmd in commands:
-            description = "    -> " + paint(f"'{cmd.name}' ", colors.WARNING)
+            description = f"-> {cmd.name} "
             if cmd.description is not None:
                 description += f"--> {cmd.description}"
             formatted = apply_shellformat(
@@ -367,12 +357,15 @@ class Cli:
             formatted = untab_firstline(
                 formatted, indent=cmd_indent+cmd_first_line_diff
             )
+            formatted = formatted.replace(
+                cmd.name, paint(cmd.name, colors.WARNING), 1
+            )
             print(formatted)
             print_recursively(cmd, 0)
         if command is None:
             print(" + " + paint("Global Flags", colors.UNDERLINE) + ":")   
             for flag in self.global_flags.values():
-                description = "    -> " + paint(f"'{flag.name}' ", colors.WARNING)
+                description = f"-> {flag.name} "
                 if flag.description is not None:
                     description += f"--> {flag.description}"
                 formatted = apply_shellformat(
@@ -380,6 +373,9 @@ class Cli:
                 )
                 formatted = untab_firstline(
                     formatted, indent=cmd_indent+cmd_first_line_diff
+                )
+                formatted = formatted.replace(
+                    flag.name, paint(flag.name, colors.WARNING), 1
                 )
                 print(formatted)
 

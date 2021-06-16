@@ -17,7 +17,7 @@ def get_apps_cmd():
     msg = """allows to interact with the apps local repository"""
     apps = Command(
         "apps", description=msg,
-        mandatory_opt=True, multi_opt=False
+        mandatory_nested_cmd=True
     )
     # ++++++++++++++++++++++++++++
     add  = get_add_cmd()

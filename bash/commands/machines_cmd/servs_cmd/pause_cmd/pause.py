@@ -1,6 +1,6 @@
 
 from dependencies.cli.aux_classes import Command, Flag, Option
-from ...reused_definitions import reused_opts, reused_flags
+from ....reused_definitions import reused_opts, reused_flags
 
 def get_pause_cmd():
     msg = """

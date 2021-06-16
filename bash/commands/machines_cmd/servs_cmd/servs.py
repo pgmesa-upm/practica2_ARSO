@@ -1,7 +1,6 @@
 
 # Imports para definicion del comando
 from dependencies.cli.aux_classes import Command, Flag, Option
-from ..reused_definitions import reused_opts, reused_flags
 from .run_cmd.run import get_run_cmd
 from .stop_cmd.stop import get_stop_cmd
 from .pause_cmd.pause import get_pause_cmd
@@ -18,7 +17,7 @@ def get_servs_cmd():
     cmd_name = "servs"
     servs = Command(
         cmd_name, description=msg,
-        mandatory_opt=True
+        mandatory_nested_cmd=True
     )
     # ++++++++++++++++++++++++++++
     run = get_run_cmd()

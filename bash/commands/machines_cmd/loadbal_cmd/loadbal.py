@@ -1,22 +1,22 @@
 
 # Imports para definicion del comando
 from dependencies.cli.aux_classes import Command, Flag, Option
-from .apps_cmd.apps import get_apps_cmd
+from .set_cmd.set import get_set_cmd
 
-# --------------------------------------------------------------------
-def get_repo_cmd():
-    msg = """allows to interact with the local repositories"""
-    repo = Command(
-        "repo", description=msg,
+def get_loadbal_cmd():
+    msg = """allows to interact with the load balancer"""
+    cmd_name = "loadbal"
+    loadbal = Command(
+        cmd_name, description=msg,
         mandatory_nested_cmd=True
     )
     # ++++++++++++++++++++++++++++
-    apps = get_apps_cmd()
-    repo.nest_cmd(apps)
+    set_ = get_set_cmd()
+    loadbal.nest_cmd(set_)
     
-    return repo
+    return loadbal
 
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
-def repo():
+def loadbal():
     pass

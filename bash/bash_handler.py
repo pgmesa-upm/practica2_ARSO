@@ -1,6 +1,5 @@
 
 from program.controllers.containers import delete
-import bash.cmd_functions.commands as commands_rep
 from dependencies.cli.cli import Cli, CmdLineError
 from dependencies.cli.aux_classes import Command, Flag, Option
 
@@ -10,12 +9,9 @@ from .commands.stop_cmd.stop import get_stop_cmd, stop
 from .commands.pause_cmd.pause import get_pause_cmd, pause
 from .commands.delete_cmd.delete import get_delete_cmd, delete
 from .commands.destroy_cmd.destroy import get_destroy_cmd, destroy
-from .commands.servs_cmd.servs import get_servs_cmd, servs
+from .commands.machines_cmd.machines import get_machines_cmd, machines
 from .commands.repo_cmd.repo import get_repo_cmd, repo
-
-
 from .commands.reused_definitions import def_reused_definitions
-from .cmd_functions import commands as commands_rep
 
 # --------------------------- BASH HANDLER ---------------------------
 # --------------------------------------------------------------------
@@ -75,9 +71,9 @@ def config_cli() -> Cli:
     cli.add_command(destroy_cmd)
     _commands[destroy_cmd.name] = destroy
     # ++++++++++++++++++++++++++++
-    servs_cmd = get_servs_cmd()
+    servs_cmd = get_machines_cmd()
     cli.add_command(servs_cmd)
-    _commands[servs_cmd.name] = servs
+    _commands[servs_cmd.name] = machines
     # ++++++++++++++++++++++++++++
     repo_cmd = get_repo_cmd()
     cli.add_command(repo_cmd)
