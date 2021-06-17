@@ -32,16 +32,11 @@ def execute(cmd_line:dict):
         args (dict): Linea de comandos introducida por el usuario 
             ya validada, es decir, debe ser correcta
     """
-    print(cmd_line)
-    return
-    cmd_passed = cmd_line["_cmd_"]
+    cmd_passed = cmd_line.pop("_cmd_")
     for cmd_name, func in _commands.items():
-        if cmd_name == cmd_line["_cmd_"]:
+        if cmd_name == cmd_passed:
             cmd_info = cmd_line.pop(cmd_passed)
-            args = cmd_info["args"]
-            options = cmd_info["options"]
-            flags = cmd_info["flags"]
-            func(*args, options=options, flags=flags)
+            func(*cmd_info.pop("args"), **cmd_info)
             break
         
 # --------------------------------------------------------------------

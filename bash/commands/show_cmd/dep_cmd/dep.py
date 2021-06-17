@@ -1,8 +1,8 @@
 
-
-
 # Imports para definicion del comando
 from dependencies.cli.aux_classes import Command, Flag, Option
+# Imports para la funcion asociada al comando
+from program import program
 
 # --------------------------------------------------------------------
 def get_dep_cmd():
@@ -13,5 +13,5 @@ def get_dep_cmd():
     return dep
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
-def dep():
-    pass
+def dep(*args, options:dict={}, flags:dict={}, nested_cmds:dict={}):
+    program.show_dependencies()

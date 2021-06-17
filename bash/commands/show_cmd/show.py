@@ -1,10 +1,10 @@
 
 # Imports para definicion del comando
 from dependencies.cli.aux_classes import Command, Flag, Option
-from .state_cmd.state import get_state_cmd
-from .dep_cmd.dep import get_dep_cmd
+from .state_cmd.state import get_state_cmd, state
+from .dep_cmd.dep import get_dep_cmd, dep
 from .info_cmd.info import get_info_cmd, info
-from .diagram_cmd.diagram import get_diagram_cmd
+from .diagram_cmd.diagram import get_diagram_cmd, diagram
 
 # --------------------------------------------------------------------
 def get_show_cmd():
@@ -30,5 +30,23 @@ def get_show_cmd():
 
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
-def show():
-    pass
+def show(*args, options:dict={}, flags:dict={}, nested_cmds:dict={}):
+    """Muestra informacion sobre el programa
+
+    Args:
+        choice (str): Indica que informacion se quiere mostrar
+        options (dict, optional): Opciones del comando show
+        flags (list, optional): Flags introducidos en el programa
+    """
+    if "diagram" in nested_cmds:
+        cmd_info = nested_cmds.pop("diagram")
+        diagram(*cmd_info.pop("args"), **cmd_info)
+    elif "state" in nested_cmds:
+        cmd_info = nested_cmds.pop("state")
+        state(*cmd_info.pop("args"), **cmd_info)
+    elif "dep" in nested_cmds:
+        cmd_info = nested_cmds.pop("dep")
+        dep(*cmd_info.pop("args"), **cmd_info)
+    elif "info" in nested_cmds:
+        cmd_info = nested_cmds.pop("info")
+        info(*cmd_info.pop("args"), **cmd_info)

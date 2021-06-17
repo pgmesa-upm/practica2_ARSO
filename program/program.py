@@ -65,6 +65,7 @@ def show_dependencies():
 
 # --------------------------------------------------------------------
 def list_lxc_containers():
+    if program_logger.level >= 40: return
     cs = register.load(containers.ID)
     if cs is not None:
         program_logger.info(" Cargando resultados...")
@@ -97,6 +98,7 @@ def list_lxc_containers():
         lxc.lxc_list(print_=True)
 
 def list_lxc_bridges():
+    if program_logger.level >= 40: return
     lxc.lxc_network_list(print_=True)
     
 # --------------------------------------------------------------------   

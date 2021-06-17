@@ -1,6 +1,8 @@
 
 # Imports para definicion del comando
 from dependencies.cli.aux_classes import Command, Flag, Option
+# Imports para la funcion asociada al comando
+from program.platform import platform
 
 # --------------------------------------------------------------------
 def get_info_cmd():
@@ -15,5 +17,5 @@ def get_info_cmd():
 
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
-def info():
-    pass
+def info(*args, options:dict={}, flags:dict={}, nested_cmds:dict={}):
+    platform.print_info()

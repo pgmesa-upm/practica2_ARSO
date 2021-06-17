@@ -26,34 +26,7 @@ from program.platform import platform
 # --------------------------------------------------------------------
 
 cmd_logger = logging.getLogger(__name__)
-# --------------------------------------------------------------------
-   
 
-        
-
-
-# --------------------------------------------------------------------
-
-
-# --------------------------------------------------------------------
-@target_containers(cmd_logger) 
-def term(*target_cs, options={}, flags=[]):
-    """Abre la terminal los contenedores que se enceuntren en 
-    target_cs
-
-    Args:
-        options (dict, optional): Opciones del comando term
-        flags (list, optional): Flags introducidos en el programa
-    """
-    # Arrancamos los contenedores validos
-    cs_s = concat_array(target_cs)
-    msg = f" Abriendo terminales de contenedores '{cs_s}'..."
-    cmd_logger.info(msg)
-    succesful_cs = containers.open_terminal(*target_cs)
-    cs_s = concat_array(succesful_cs)
-    msg = f" Se ha abierto la terminal de los contenedores '{cs_s}'\n"
-    cmd_logger.info(msg)
-    
     # --------------------------------------------------------------------
 def add(num:int, options={}, flags=[], extra_cs=[]):
     """Añade el numero de contenedores especificados a la plataforma
@@ -141,41 +114,5 @@ def show(options={}, flags={}):
         platform.print_info()
         
 # --------------------------------------------------------------------
-@target_containers(logger=cmd_logger)
-def publish(c:Container, options={}, flags={}):
-    im_dict = lxc.lxc_image_list()
-    aliases = []
-    for f in im_dict:
-        aliases.append(im_dict[f]["ALIAS"])
-    if not "--alias" in options:
-        if c.tag == servers.TAG:
-            name = "tomcat8_serv"
-        elif c.tag == data_base.TAG:
-            name = "mongo_db"
-        elif c.tag == load_balancer.TAG:
-            name = "haproxy_lb"
-        elif c.tag == client.TAG:
-            name = "lynx_client"
-        j = 0
-        while name in aliases:
-            j += 1
-            if j == 1:
-                name = f"{name}{j}"
-                continue
-            name = f"{name[:-1]}{j}"
-    else:
-        name = options["--alias"]["args"][0]
-    if name in aliases:
-        err_msg = (f" El alias '{name}' ya existe en el repositorio " +
-                    "local de lxc")
-        cmd_logger.error(err_msg)
-        return
-    try:
-        msg = (f" Publicando imagen de '{c.tag}' '{c}' con alias " + 
-               f"'{name}' (puede tardar)...")
-        cmd_logger.info(msg)
-        c.publish(alias=name)
-        cmd_logger.info(" Imagen publicada con exito")
-    except Exception as err:
-        cmd_logger.error(err)
+
         
