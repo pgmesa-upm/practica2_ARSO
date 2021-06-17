@@ -12,6 +12,7 @@ from dependencies.utils.tools import concat_array
 from program.controllers import bridges, containers
 from program.platform.machines import servers
 from ..repo_cmd.apps_cmd.apps import apps
+from ..term_cmd.term import term
 
 
 # --------------------------------------------------------------------
@@ -25,6 +26,10 @@ def get_start_cmd():
         cmd_name, description=msg, 
         extra_arg=True, multi=True
     )
+    # Flags ---------------------- 
+    start.add_flag(reused_flags["-m"])
+    start.add_flag(reused_flags["-t"])
+    
     return start
 
 # --------------------------------------------------------------------

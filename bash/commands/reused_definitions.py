@@ -39,16 +39,13 @@ def _def_reused_flags():
     force = Flag("-y", description=msg)
     reused_flags[force.name] = force
     # -------------
-    msg = """ 
-    opens the terminal window of the containers that are being 
-    runned
+    msg = """
+    opens the terminal window of the containers
     """
     terminal = Flag("-t", description=msg)
     reused_flags[terminal.name] = terminal
     # -------------
-    msg = """ 
-    marks the servers if they are being runned
-    """
+    msg = """marks the servers index.html"""
     mark = Flag("-m", description=msg)
     reused_flags[mark.name] = mark
     

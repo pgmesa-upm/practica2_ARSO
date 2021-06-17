@@ -1,5 +1,4 @@
 
-from program.controllers.containers import delete
 from dependencies.cli.cli import Cli, CmdLineError
 from dependencies.cli.aux_classes import Command, Flag, Option
 
@@ -11,6 +10,9 @@ from .commands.delete_cmd.delete import get_delete_cmd, delete
 from .commands.destroy_cmd.destroy import get_destroy_cmd, destroy
 from .commands.machines_cmd.machines import get_machines_cmd, machines
 from .commands.repo_cmd.repo import get_repo_cmd, repo
+from .commands.show_cmd.show import get_show_cmd, show
+from .commands.term_cmd.term import get_term_cmd, term
+from .commands.publish_cmd.publish import get_publish_cmd, publish
 from .commands.reused_definitions import def_reused_definitions
 
 # --------------------------- BASH HANDLER ---------------------------
@@ -79,6 +81,17 @@ def config_cli() -> Cli:
     cli.add_command(repo_cmd)
     _commands[repo_cmd.name] = repo
     # ++++++++++++++++++++++++++++
+    show_cmd = get_show_cmd()
+    cli.add_command(show_cmd)
+    _commands[show_cmd.name] = show
+    # ++++++++++++++++++++++++++++
+    term_cmd = get_term_cmd()
+    cli.add_command(term_cmd)
+    _commands[term_cmd.name] = term
+    # ++++++++++++++++++++++++++++
+    publish_cmd = get_publish_cmd()
+    cli.add_command(publish_cmd)
+    _commands[publish_cmd.name] = publish
     # ---------------- Global Flags
     msg = """ 
     'warning mode', only shows warning and error msgs during 
@@ -113,149 +126,6 @@ def config_cli() -> Cli:
     sequential_execution = Flag("-s", description=msg)
     cli.add_global_flag(sequential_execution)
     
-    return cli
-
-
-
-
-
-
-
-
-def _def_platform_cmds(cli:Cli):
-    global _commands
-    
-    # ++++++++++++++++++++++++++++
-    cmd_name = "show"
-    msg = """ 
-    shows information about the program
-    """
-    msg = ""
-    show = Command(
-        cmd_name, description=msg, 
-        mandatory_opt=True, multi_opt=False
-    )
-    # -------------
-    msg = """ 
-    shows information about every machine/component of the platform
-    """
-    show.define_option("state", description=msg)
-    # -------------
-    msg = """ 
-    displays a diagram that explains the structure of the platform
-    """
-    show.define_option("diagram", description=msg)
-    # -------------
-    msg = """ 
-    shows information about the external dependencies of the program
-    """
-    show.define_option("dep", description=msg)
-    # -------------
-    msg = """ 
-    shows important information about how the platform is built and 
-    deployed, and the requirements that the container images need to 
-    fulfill, in order to fit into the platform (in case an specific
-    image is passed to the program)
-    """
-    show.define_option("info", description=msg)
-    # -------------
-    cli.add_command(show)
-    _commands[cmd_name] = commands_rep.show
-    
-    # ++++++++++++++++++++++++++++
-    cmd_name = "term"
-    msg = """ 
-    <void or container_names> opens the terminal of the containers 
-    specified or all of them if no name is given
-    """
-    term = Command(
-        cmd_name, description=msg, 
-        extra_arg=True, multi=True
-    )
-    cli.add_command(term)
-    _commands[cmd_name] = commands_rep.term
-    
-    # ++++++++++++++++++++++++++++
-    cmd_name = "publish"
-    msg = """ 
-    <container_name> publish the image of the container specified
-    """
-    publish = Command(
-        cmd_name, description=msg, 
-        extra_arg=True, mandatory=True
-    )
-    publish.define_option(
-        "--alias", description="allows to specify the alias of the image",
-        extra_arg=True, mandatory=True
-    )
-    cli.add_command(publish)
-    _commands[cmd_name] = commands_rep.publish
-
-
-def _def_loadbalancer_cmds(cli:Cli):
-    pass
-
-def _def_client_cmds(cli:Cli):
-    pass
-
-def _def_database_cmds(cli:Cli):
-    pass
-
-
-    # -------------
-
-def _config_cli() -> Cli:
-    """Se definen todos los argumentos que podra recibir el programa 
-    (se asocia cada comando principal con una funcion y se almacena 
-    en commands) y se configura la command line interface (cli)
-
-    Returns:
-            Cli: Devuelve la cli configurada con los comandos del 
-                programa
-    """
-    global _commands
-    cli = Cli()
-    # Arguments
-    # ++++++++++++++++++++++++++++
-    
-    
-    
-    # -------------
-    msg = """ 
-    adds clients instead of servers
-    """
-    add.define_option("-cl", description=msg)
-    # -------------
-    
-    
-    
-    # ++++++++++++++++++++++++++++
-    cmd_name = "change"
-    msg = """ 
-    allows to change some features of the platform
-    """
-    change = Command(
-        cmd_name, description=msg,
-        mandatory_opt=True,  multi_opt=False
-    )
-    # -------------
-    msg = """ 
-    changes the balance algorithm of the load balancer
-    """
-    change.define_option(
-        "balance", description=msg, 
-        extra_arg=True, mandatory=True
-    )
-    # -------------
-    cli.add_command(change)
-    _commands[cmd_name] = commands_rep.change
-    
-    # ++++++++++++++++++++++++++++
-    
-    # -------------
-    _commands[cmd_name] = commands_rep.app
-
-    # ++++++++++++++++++++++++++++
-    
+    return cli    
     
 # --------------------------------------------------------------------
