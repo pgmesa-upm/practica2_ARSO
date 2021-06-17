@@ -30,7 +30,7 @@ def get_show_cmd():
 
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
-def show(*args, options:dict={}, flags:dict={}, nested_cmds:dict={}):
+def show(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
     """Muestra informacion sobre el programa
 
     Args:
@@ -38,15 +38,15 @@ def show(*args, options:dict={}, flags:dict={}, nested_cmds:dict={}):
         options (dict, optional): Opciones del comando show
         flags (list, optional): Flags introducidos en el programa
     """
-    if "diagram" in nested_cmds:
-        cmd_info = nested_cmds.pop("diagram")
+    if "diagram" in nested_cmd:
+        cmd_info = nested_cmd.pop("diagram")
         diagram(*cmd_info.pop("args"), **cmd_info)
-    elif "state" in nested_cmds:
-        cmd_info = nested_cmds.pop("state")
+    elif "state" in nested_cmd:
+        cmd_info = nested_cmd.pop("state")
         state(*cmd_info.pop("args"), **cmd_info)
-    elif "dep" in nested_cmds:
-        cmd_info = nested_cmds.pop("dep")
+    elif "dep" in nested_cmd:
+        cmd_info = nested_cmd.pop("dep")
         dep(*cmd_info.pop("args"), **cmd_info)
-    elif "info" in nested_cmds:
-        cmd_info = nested_cmds.pop("info")
+    elif "info" in nested_cmd:
+        cmd_info = nested_cmd.pop("info")
         info(*cmd_info.pop("args"), **cmd_info)

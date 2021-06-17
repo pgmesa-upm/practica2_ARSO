@@ -56,7 +56,8 @@ def list_apps():
     
 # --------------------------------------------------------------------  
 @multi 
-def add_apps(path:str, name:str=None):
+def add_apps(path:str=None, name:str=None):
+    if path is None: return
     # Comprobamos que la ruta existe
     if not os.path.exists(path):
         app_logger.error(f" La ruta absoluta '{path}' no existe")
@@ -229,25 +230,4 @@ def clear_repository(skip:list=[]):
         process.shell(f"rm -rf {base_path}/{app_name}")
         app_logger.info(f" App '{app_name}' eliminada")
         
-# --------------------------------------------------------------------
-def mark_apps(*servs, undo=False):
-    cs = register.load(containers.ID)
-    if cs is None:
-        app_logger.error(" No hay contenedores creados")
-        return
-    existing_servs = list(filter(lambda c: c.tag == servers.TAG,cs))
-    existing_servs_names = list(map(lambda s: s.name, existing_servs))
-    if len(existing_servs) == 0:
-        app_logger.error(" No hay servidores en funcionamiento")
-        return
-    if len(servs) == 0:
-        servs = existing_servs
-    else:
-        servs = list(filter(lambda s: s.name in servs, existing_servs))
-    for serv in servs:
-        if serv.name not in existing_servs_names:
-            msg = f" El servidor '{serv}' no existe en el programa"
-            app_logger.error(msg)
-            continue
-        servers.mark_htmlindexes(serv, undo=undo)
 # --------------------------------------------------------------------

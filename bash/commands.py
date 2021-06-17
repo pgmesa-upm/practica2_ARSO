@@ -42,35 +42,16 @@ def add(num:int, options={}, flags=[], extra_cs=[]):
             pueda comunicar con esta funcion y tambien cree los 
             clientes y el balanceador, ademas de los servidores
     """
-    if not platform.is_deployed():
-        msg = (
-            " La plataforma de servidores no ha sido desplegada, se " +
-            "debe crear una nueva antes de añadir los servidores"
-        )
-        cmd_logger.error(msg)
-        return
+    
     
     existent_cs = register.load(containers.ID)
     if "-cl" in options:
         climage, name = get_cl_opts(options, flags)
         client.create_client(name=name, image=climage)
         return
-    elif num > 0:
-        if existent_cs != None:
-            ex_s = filter(lambda cs: cs.tag == servers.TAG, existent_cs)
-            n = len(list(ex_s))
-            if n + num > 5: 
-                msg = (f" La plataforma no admite mas de 5 servidores. " +
-                        f"Existen {n} actualmente, no se " +
-                        f"pueden añadir {num} mas")
-                cmd_logger.error(msg)
-                return
-        simage, names = get_servers_opts(options, flags)
-        servs = servers.create_servers(num, *names, image=simage)
         
     successful_cs = extra_cs + servs
-    if not "-q" in flags:
-        program.list_lxc_containers() 
+    program.list_lxc_containers() 
     cs_s = concat_array(successful_cs)
     msg = (f" Contenedores '{cs_s}' inicializados\n")
     cmd_logger.info(msg)
@@ -95,24 +76,6 @@ def change(options={}, flags={}):
         load_balancer.change_algorithm(algorithm)
 
         
-# -------------------------------------------------------------------- 
-def show(options={}, flags={}):
-    """Muestra informacion sobre el programa
-
-    Args:
-        choice (str): Indica que informacion se quiere mostrar
-        options (dict, optional): Opciones del comando show
-        flags (list, optional): Flags introducidos en el programa
-    """
-    if "diagram" in options:
-        program.show_platform_diagram()
-    elif "state" in options:
-        platform.print_state()
-    elif "dep" in options:
-        program.show_dependencies()
-    elif "info" in options:
-        platform.print_info()
-        
-# --------------------------------------------------------------------
+# ------------------------------------------------------------------
 
         

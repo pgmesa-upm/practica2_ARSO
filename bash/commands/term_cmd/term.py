@@ -3,7 +3,7 @@
 import logging
 from dependencies.cli.aux_classes import Command, Flag, Option
 # Imports para la funcion asociada al comando
-from ..reused_functions import target_containers
+from ..reused_functions import get_cs
 from dependencies.utils.tools import concat_array
 from program.controllers import bridges, containers
 
@@ -23,8 +23,8 @@ def get_term_cmd():
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
 term_logger = logging.getLogger(__name__)
-@target_containers(term_logger) 
-def term(*target_cs, options={}, flags=[]):
+def term(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={},
+         **extras):
     """Abre la terminal los contenedores que se enceuntren en 
     target_cs
 
@@ -33,6 +33,10 @@ def term(*target_cs, options={}, flags=[]):
         flags (list, optional): Flags introducidos en el programa
     """
     # Arrancamos los contenedores validos
+    tags = []
+    if "tags" in extras: tags = extras["tags"]
+    target_cs = get_cs(args, options, tags=tags)
+    if target_cs is None: return
     cs_s = concat_array(target_cs)
     msg = f" Abriendo terminales de contenedores '{cs_s}'..."
     term_logger.info(msg)

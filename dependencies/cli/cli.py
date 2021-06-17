@@ -88,10 +88,9 @@ class Cli:
     
     def _process_cmd(self, cmd:Command, args:list):
         processed_line = { 
-            "args": [], "options": {}, "flags": [], "nested_cmds": {},
+            "args": [], "options": {}, "flags": [], "nested_cmd": {},
         }
-        params, options, nested_cmds = self._split_line(cmd, args)
-        print(params, options, nested_cmds)
+        params, options, nested_cmd = self._split_line(cmd, args)
         # Procesamos flags del comando
         flags = self._check_flags(cmd, params)
         processed_line["flags"] = flags
@@ -104,14 +103,14 @@ class Cli:
             opt_params = self._check_valid_params(opt, opt_params)
             processed_line["options"][opt_name] = opt_params
         # Procesamos los comandos anidados de forma recursiva
-        if len(nested_cmds) == 0 and cmd.mnc:
+        if len(nested_cmd) == 0 and cmd.mnc:
             err = (f"El comando '{cmd.name}' requiere un comando extra "
-                   f"-> {list(cmd.nested_cmds.keys())}")
+                   f"-> {list(cmd.nested_cmd.keys())}")
             raise CmdLineError(_help=(not self.printed), msg=err)
-        for cmd_name, nested_args in nested_cmds.items():
-            nested_cmd = cmd.nested_cmds[cmd_name]
+        for cmd_name, nested_args in nested_cmd.items():
+            nested_cmd = cmd.nested_cmd[cmd_name]
            
-            processed_line["nested_cmds"][cmd_name] = (
+            processed_line["nested_cmd"][cmd_name] = (
                 self._process_cmd(nested_cmd, nested_args)
             )
         return processed_line
@@ -119,12 +118,12 @@ class Cli:
     def _split_line(self, cmd:Command, args:list) -> dict:
         # Separamos por partes la linea de comandos
         ant = None; last_index = 1
-        params = []; opts = {}; nested_cmds = {} 
+        params = []; opts = {}; nested_cmd = {} 
         for i, arg in enumerate(args):
-            if arg in cmd.nested_cmds:
+            if arg in cmd.nested_cmd:
                 if ant is not None:
                     opts[ant] = args[last_index:i]
-                nested_cmds[arg] = args[i+1:]
+                nested_cmd[arg] = args[i+1:]
                 break
             elif arg in cmd.options:
                 if arg in opts or arg == ant:
@@ -139,7 +138,7 @@ class Cli:
         else:
             if ant is not None:
                 opts[ant] = args[last_index:]
-        return params, opts, nested_cmds
+        return params, opts, nested_cmd
       
     def _check_valid_params(self, cmd:Command, params:list) -> list:
         """Revisa si los parametro que se han pasado a un comando 
@@ -286,14 +285,14 @@ class Cli:
             return color + line + colors.ENDC
             
         def print_recursively(cmd:Command, i:int):
-            nested_cmds = cmd.nested_cmds.values()
+            nested_cmd = cmd.nested_cmd.values()
             extra_indent = (opt_indent-cmd_indent)*i
-            if len(nested_cmds) > 0:
+            if len(nested_cmd) > 0:
                 print(
                     " "*8*(i+1) + "- " + 
                     paint("commands", colors.UNDERLINE) + ":"
                 )
-                for n_cmd in nested_cmds:
+                for n_cmd in nested_cmd:
                     description = f"=> {n_cmd.name} "
                     if n_cmd.description is not None:
                         description += f"--> {n_cmd.description}"

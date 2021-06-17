@@ -30,6 +30,44 @@ def have_containers():
         return False
     return True
 
+def search_cs(cs_names:list=[], tags:list=[], skip:list=[], talk:bool=True):
+    existing_cs = register.load(containers.ID)
+    if existing_cs is None: 
+        plt_logger.error(" No existen contenedores en el programa")
+        return None
+    check_tags = True
+    if len(tags) == 0: check_tags = False
+    all_cs = len(cs_names) == 0
+    if all_cs:
+        cs_names = list(map(str, existing_cs))
+    found = []; skipped = False
+    for c_name in cs_names:
+        for ex_c in existing_cs:
+            if c_name == ex_c.name:
+                if not check_tags or ex_c.tag in tags:
+                    if not ex_c.name in skip:
+                        found.append(ex_c)
+                    else:
+                        skipped = True
+                elif talk:
+                    msg = f" El contenedor '{c_name}' no es del tipo {tags}"
+                    plt_logger.error(msg)
+                break
+        else:
+            if talk:
+                msg = f" El contenedor '{c_name}' no se existe en el programa"
+                plt_logger.error(msg)
+    if len(found) == 0:
+        if all_cs and not skipped:
+            msg = f" No existen {tags} para realizar la operacion"
+            plt_logger.error(msg)
+        else:
+            msg = (f" No se han seleccionado contenedores para " + 
+                    "realizar la operacion")
+            plt_logger.error(msg)
+        return None
+    return found
+    
 # --------------------------------------------------------------------
 def update_conexions():
     """ Se encarga de conectar los contenedores con los bridge. Mira 

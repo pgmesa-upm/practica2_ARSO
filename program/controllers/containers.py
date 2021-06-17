@@ -35,7 +35,7 @@ def init(c:Container=None):
     
 # --------------------------------------------------------------------
 @catch_foreach(cs_logger)
-def start(c:Container):
+def start(c:Container=None):
     cs_logger.info(f" Arrancando {c.tag} '{c.name}'...")
     c.start()
     cs_logger.info(f" {c.tag} '{c.name}' arrancado con exito")
@@ -43,7 +43,7 @@ def start(c:Container):
         
 # --------------------------------------------------------------------
 @catch_foreach(cs_logger)
-def pause(c:Container):
+def pause(c:Container=None):
     cs_logger.info(f" Pausando {c.tag} '{c.name}'...")
     c.pause()
     cs_logger.info(f" {c.tag} '{c.name}' pausado con exito")
@@ -51,7 +51,7 @@ def pause(c:Container):
         
 # --------------------------------------------------------------------
 @catch_foreach(cs_logger)
-def stop(c:Container):
+def stop(c:Container=None):
     cs_logger.info(f" Deteniendo {c.tag} '{c.name}'...")
     c.stop()
     cs_logger.info(f" {c.tag} '{c.name}' detenido con exito")
@@ -70,7 +70,7 @@ def delete(c:Container=None):
 
 # --------------------------------------------------------------------
 @catch_foreach(cs_logger)
-def open_terminal(c:Container):
+def open_terminal(c:Container=None):
     c.open_terminal()
         
 # --------------------------------------------------------------------

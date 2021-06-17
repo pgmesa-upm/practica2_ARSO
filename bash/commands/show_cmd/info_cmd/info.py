@@ -17,5 +17,5 @@ def get_info_cmd():
 
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
-def info(*args, options:dict={}, flags:dict={}, nested_cmds:dict={}):
+def info(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
     platform.print_info()

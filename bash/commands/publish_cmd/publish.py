@@ -5,7 +5,7 @@ from dependencies.cli.aux_classes import Command, Flag, Option
 # Imports para la funcion asociada al comando
 
 from dependencies.lxc.lxc_classes.container import Container
-from ..reused_functions import target_containers
+from ..reused_functions import get_cs
 from program.platform.machines import servers
 from program.platform.machines import (
     servers, load_balancer, client, data_base
@@ -40,8 +40,10 @@ def _def_alias_opt():
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
 publish_logger = logging.getLogger(__name__)
-@target_containers(logger=publish_logger)
-def publish(c:Container, options={}, flags={}):
+def publish(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
+    c_list = get_cs(args, options)
+    if c_list is None: return
+    c:Container = c_list[0]
     im_dict = lxc.lxc_image_list()
     aliases = []
     for f in im_dict:
@@ -63,7 +65,7 @@ def publish(c:Container, options={}, flags={}):
                 continue
             name = f"{name[:-1]}{j}"
     else:
-        name = options["--alias"]["args"][0]
+        name = options["--alias"][0]
     if name in aliases:
         err_msg = (f" El alias '{name}' ya existe en el repositorio " +
                     "local de lxc")

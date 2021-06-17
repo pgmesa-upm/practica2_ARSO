@@ -13,5 +13,5 @@ def get_dep_cmd():
     return dep
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
-def dep(*args, options:dict={}, flags:dict={}, nested_cmds:dict={}):
+def dep(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
     program.show_dependencies()

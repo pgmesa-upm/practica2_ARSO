@@ -1,7 +1,7 @@
 
 import logging
 
-## Imports para la definicion del comando
+# Imports para la definicion del comando
 from dependencies.cli.aux_classes import Command, Flag, Option
 from ..reused_definitions import reused_opts, reused_flags
 # Imports para la funcion asociada al comando
@@ -20,11 +20,15 @@ def get_destroy_cmd():
     deletes every component of the platform created
     """
     destroy = Command(cmd_name, description=msg)
+    # Flags ---------------------- 
+    destroy.add_flag(reused_flags["-y"])
+    
     return destroy
 
 # --------------------------------------------------------------------
+# --------------------------------------------------------------------
 destroy_logger = logging.getLogger(__name__)
-def destroy(options={}, flags=[]):
+def destroy(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
     """Destruye la platafrma del sistema-servidor eliminando todos
     sus componenetes (bridges, contenedores y las conexiones entre
     ellos). Reutiliza el codigo de la funcion eliminar para eliminar
@@ -55,7 +59,7 @@ def destroy(options={}, flags=[]):
     else:
         c_names = list(map(lambda c: c.name, cs))
         flags.append("-y") # Añadimos el flag -f
-        delete(*c_names, flags=flags, skip_tags=[])
+        delete(args=c_names, flags=flags, tags=[])
     # Eliminamos bridges
     bgs = register.load(bridges.ID)
     if bgs == None: 
@@ -64,8 +68,7 @@ def destroy(options={}, flags=[]):
         msg = f" Eliminando bridges '{concat_array(bgs)}'..."
         destroy_logger.info(msg)
         successful_bgs = bridges.delete(*bgs)
-        if not "-q" in flags:
-            program.list_lxc_bridges()
+        program.list_lxc_bridges()
         bgs_s = concat_array(successful_bgs)
         msg = (f" Bridges '{bgs_s}' eliminados\n")
         destroy_logger.info(msg)  

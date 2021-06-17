@@ -1,6 +1,12 @@
 
+import logging
+
+# Imports para definicion del comando
 from dependencies.cli.aux_classes import Command, Flag, Option
-from ....reused_definitions import reused_opts, reused_flags
+from ...reused_definitions import reused_opts, reused_flags
+# Imports para la funcion asociada al comando
+from program.platform.machines import servers
+from ...start_cmd.start import start
 
 def get_run_cmd():
     msg = """
@@ -34,3 +40,8 @@ def _def_use_opt():
         extra_arg=True, mandatory=True
     )
     return use
+
+# -------------------------------------------------------------------- 
+# -------------------------------------------------------------------- 
+def run(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
+    start(args=args, options=options, flags=flags, tags=[servers.TAG])

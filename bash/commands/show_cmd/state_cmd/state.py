@@ -14,5 +14,5 @@ def get_state_cmd():
 
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
-def state(*args, options:dict={}, flags:dict={}, nested_cmds:dict={}):
+def state(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
     platform.print_state()

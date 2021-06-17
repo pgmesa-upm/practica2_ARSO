@@ -42,7 +42,7 @@ class Command:
         self.mnc = mandatory_nested_cmd
         self.options = {}
         self.flags = {}
-        self.nested_cmds = {}
+        self.nested_cmd = {}
         
     def nest_cmd(self, cmd):
         """AAnido un comando en el comando principal
@@ -54,7 +54,7 @@ class Command:
             msg = ("No esta permitido que las opciones tengan " + 
             "otras opciones anidadas")
             raise CmdDefinitionError(msg)
-        self.nested_cmds[cmd.name] = cmd
+        self.nested_cmd[cmd.name] = cmd
    
     def add_option(self, option):
         if type(self) == Option:

@@ -63,6 +63,7 @@ def get_deploy_cmd():
     # Flags ---------------------- 
     deploy.add_flag(reused_flags["-l"])
     deploy.add_flag(reused_flags["-t"])
+    deploy.add_flag(reused_flags["-m"])
     
     return deploy
 
@@ -163,8 +164,9 @@ def _def_use_opt():
     return use
 
 # -------------------------------------------------------------------- 
+# -------------------------------------------------------------------- 
 deploy_logger = logging.getLogger(__name__)
-def deploy(numServs:int, options={}, flags=[]):
+def deploy(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
     """Crea la plataforma del sistema-servidor, desplegando los 
     bridges y contenedores y conectandolos entre ellos (de la forma
     que se hayan definido estas conexiones en la carpeta program)
@@ -186,11 +188,11 @@ def deploy(numServs:int, options={}, flags=[]):
     deploy_logger.debug(f" Nombre de bridges (objetos) --> '{bgs_s}'")
     deploy_logger.info(" Creando bridges...")
     succesful_bgs = bridges.init(*bgs)
-    if not "-q" in flags:
-        program.list_lxc_bridges()
+    program.list_lxc_bridges()
     bgs_s = concat_array(succesful_bgs)
     deploy_logger.info(f" Bridges '{bgs_s}' creados\n")
     # Creando contenedores
+    num_servs = args[0]
     dbimage = get_db_opts(options, flags)
     lbimage, algorithm = get_lb_opts(options, flags)
     if "--client" in options:
@@ -206,7 +208,7 @@ def deploy(numServs:int, options={}, flags=[]):
         if "--client" in options:
             cl = client.create_client(name=clname, image=climage)
             if cl is not None: successful_cs.append(cl)
-        servs = servers.create_servers(numServs, *names, image=simage)
+        servs = servers.create_servers(num_servs, *names, image=simage)
         successful_cs += servs
     else:
         # Utilizamos concurrencia de hilos
@@ -226,7 +228,7 @@ def deploy(numServs:int, options={}, flags=[]):
                 )
                 threads.append(cl_thread)
             servs_thread = executor.submit(
-                servers.create_servers, numServs, *names, image=simage
+                servers.create_servers, num_servs, *names, image=simage
             )
             threads.append(servs_thread)
             for thr in threads:
@@ -236,8 +238,7 @@ def deploy(numServs:int, options={}, flags=[]):
                 elif container != None:
                     successful_cs.append(container)
     # Mostramos la informacion y comprobamos flag de arranque
-    if not "-q" in flags:
-        program.list_lxc_containers() 
+    program.list_lxc_containers() 
     cs_s = concat_array(successful_cs)
     msg = (f" Contenedores '{cs_s}' inicializados\n")
     deploy_logger.info(msg)
@@ -248,5 +249,5 @@ def deploy(numServs:int, options={}, flags=[]):
         deploy_logger.info(" Conexiones establecidas\n")
         if "-l" in flags:
             c_names = list(map(lambda c: c.name, successful_cs))
-            start(*c_names, options=options, flags=flags)
+            start(args=c_names, options=options, flags=flags)
     deploy_logger.info(" Plataforma de servidores desplegada")

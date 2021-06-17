@@ -8,7 +8,9 @@ from .commands.stop_cmd.stop import get_stop_cmd, stop
 from .commands.pause_cmd.pause import get_pause_cmd, pause
 from .commands.delete_cmd.delete import get_delete_cmd, delete
 from .commands.destroy_cmd.destroy import get_destroy_cmd, destroy
-from .commands.machines_cmd.machines import get_machines_cmd, machines
+from .commands.servs_cmd.servs import get_servs_cmd, servs
+from .commands.client_cmd.client import get_client_cmd, client
+from .commands.loadbal_cmd.loadbal import get_loadbal_cmd, loadbal
 from .commands.repo_cmd.repo import get_repo_cmd, repo
 from .commands.show_cmd.show import get_show_cmd, show
 from .commands.term_cmd.term import get_term_cmd, term
@@ -36,7 +38,7 @@ def execute(cmd_line:dict):
     for cmd_name, func in _commands.items():
         if cmd_name == cmd_passed:
             cmd_info = cmd_line.pop(cmd_passed)
-            func(*cmd_info.pop("args"), **cmd_info)
+            func(**cmd_info)
             break
         
 # --------------------------------------------------------------------
@@ -68,9 +70,17 @@ def config_cli() -> Cli:
     cli.add_command(destroy_cmd)
     _commands[destroy_cmd.name] = destroy
     # ++++++++++++++++++++++++++++
-    servs_cmd = get_machines_cmd()
+    servs_cmd = get_servs_cmd()
     cli.add_command(servs_cmd)
-    _commands[servs_cmd.name] = machines
+    _commands[servs_cmd.name] = servs
+    # ++++++++++++++++++++++++++++
+    client_cmd = get_client_cmd()
+    cli.add_command(client_cmd)
+    _commands[client_cmd.name] = client
+    # ++++++++++++++++++++++++++++
+    lb_cmd = get_loadbal_cmd()
+    cli.add_command(lb_cmd)
+    _commands[lb_cmd.name] = loadbal
     # ++++++++++++++++++++++++++++
     repo_cmd = get_repo_cmd()
     cli.add_command(repo_cmd)

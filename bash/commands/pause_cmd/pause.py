@@ -6,7 +6,7 @@ from dependencies.cli.aux_classes import Command, Flag, Option
 from ..reused_definitions import reused_opts, reused_flags
 # Imports para la funcion asociada al comando
 from program import program
-from ..reused_functions import target_containers
+from ..reused_functions import get_cs
 from dependencies.utils.tools import concat_array
 from program.controllers import bridges, containers
 
@@ -21,12 +21,16 @@ def get_pause_cmd():
         cmd_name, description=msg, 
         extra_arg=True, multi=True
     )
+    # ++++++++++++++++++++++++++++
+    skip = reused_opts["--skip"]
+    pause.add_option(skip)
+    
     return pause
 
 # --------------------------------------------------------------------
-pause_logger = logging.getLogger(__name__)
-@target_containers(pause_logger)  
-def pause(*target_cs, options={}, flags=[]):
+pause_logger = logging.getLogger(__name__) 
+def pause(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={},
+          **extras):
     """Pausa los contenedores que se enceuntren en target_cs
 
     Args:
@@ -34,11 +38,14 @@ def pause(*target_cs, options={}, flags=[]):
         flags (list, optional): Flags introducidos en el programa
     """
     # Pausamos los contenedores validos
+    tags = []
+    if "tags" in extras: tags = extras["tags"]
+    target_cs = get_cs(args, options, tags=tags)
+    if target_cs is None: return
     msg = f" Pausando contenedores '{concat_array(target_cs)}'..."
     pause_logger.info(msg)
     succesful_cs = containers.pause(*target_cs)
-    if not "-q" in flags:
-        program.list_lxc_containers()
+    program.list_lxc_containers()
     cs_s = concat_array(succesful_cs)
     msg = (f" Los contenedores '{cs_s}' han sido pausados \n")
     pause_logger.info(msg)

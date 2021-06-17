@@ -7,3 +7,8 @@ def get_list_cmd():
         "list", description="lists the apps of repository"
     )
     return ls
+
+# --------------------------------------------------------------------
+# --------------------------------------------------------------------
+def ls(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
+    pass

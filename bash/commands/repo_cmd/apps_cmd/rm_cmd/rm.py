@@ -8,4 +8,12 @@ def get_rm_cmd():
         "rm", description=msg, 
         extra_arg=True, mandatory=True, multi=True
     )
+    # Flags ---------------------- 
+    rm.add_flag(reused_flags["-y"])
+    
     return rm
+
+# --------------------------------------------------------------------
+# --------------------------------------------------------------------
+def rm(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
+    pass

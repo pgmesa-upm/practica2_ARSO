@@ -7,6 +7,7 @@ from dependencies.register import register
 from dependencies.lxc.lxc_classes.container import Container
 from dependencies.lxc import lxc
 from program.platform import platform
+from dependencies.utils.tools import concat_array
 
 # --------------------------- SERVIDORES -----------------------------
 # --------------------------------------------------------------------
@@ -72,6 +73,7 @@ def _config_servs(*servs, image=None) -> list:
     # los servidores en base a si ya la hemos creado antes o 
     #  nos han pasado una en concreto para usar
     servs = list(servs); successful = []
+    serv_logger.info(f" Inicializando servidores '{concat_array(servs)}'")
     if image == None and platform.is_imageconfig_needed(IMG_ID):
         serv:Container = servs.pop(0)
         serv_logger.info(" Creando la imagen base de los servidores...")

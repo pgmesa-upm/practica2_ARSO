@@ -10,3 +10,8 @@ def get_setdef_cmd():
         extra_arg=True, mandatory=True
     )
     return setdef
+
+# --------------------------------------------------------------------
+# --------------------------------------------------------------------
+def setdef(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
+    pass

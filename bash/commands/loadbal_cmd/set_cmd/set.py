@@ -1,6 +1,6 @@
 
 from dependencies.cli.aux_classes import Command, Flag, Option
-from ....reused_definitions import reused_opts, reused_flags
+from ...reused_definitions import reused_opts, reused_flags
 from .algorithm_cmd.algorithm import get_algorithm_cmd
 from .port_cmd.port import get_port_cmd
 
