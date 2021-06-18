@@ -344,7 +344,7 @@ class Cli:
         if command is not None:
             commands = [command]
         print(paint(" python3 __main__ <gflags> [command] <parameters> " + 
-              "<flags> [options] <parameters> <flags> ...", colors.BOLD))
+              "<flags> <options> [command] ...", colors.BOLD))
         print(" + " + paint("Commands", colors.UNDERLINE) + ":")
         for cmd in commands:
             description = f"-> {cmd.name} "
