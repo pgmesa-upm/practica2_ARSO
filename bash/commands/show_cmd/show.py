@@ -40,13 +40,13 @@ def show(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
     """
     if "diagram" in nested_cmd:
         cmd_info = nested_cmd.pop("diagram")
-        diagram(*cmd_info.pop("args"), **cmd_info)
+        diagram(**cmd_info)
     elif "state" in nested_cmd:
         cmd_info = nested_cmd.pop("state")
-        state(*cmd_info.pop("args"), **cmd_info)
+        state(**cmd_info)
     elif "dep" in nested_cmd:
         cmd_info = nested_cmd.pop("dep")
-        dep(*cmd_info.pop("args"), **cmd_info)
+        dep(**cmd_info)
     elif "info" in nested_cmd:
         cmd_info = nested_cmd.pop("info")
-        info(*cmd_info.pop("args"), **cmd_info)
+        info(**cmd_info)

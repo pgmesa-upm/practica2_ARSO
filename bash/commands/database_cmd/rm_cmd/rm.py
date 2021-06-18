@@ -5,11 +5,11 @@ import logging
 from dependencies.cli.aux_classes import Command, Flag, Option
 from ...reused_definitions import reused_opts, reused_flags
 # Imports para la funcion asociada al comando
-from program.platform.machines import client
+from program.platform.machines import data_base
 from ...delete_cmd.delete import delete
 
 def get_rm_cmd():
-    msg = """removes the client"""
+    msg = """removes the data base"""
     rm = Command("rm", description=msg)
     # Flags ---------------------- 
     rm.add_flag(reused_flags["-y"])
@@ -20,10 +20,10 @@ def get_rm_cmd():
 # --------------------------------------------------------------------
 rm_logger = logging.getLogger(__name__)
 def rm(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
-    cl = client.get_client()
-    if cl is None: 
-        msg = (" No existe el contenedor cliente en la plataforma")
+    db = data_base.get_database()
+    if db is None: 
+        msg = (" No existe la base de datos en la plataforma")
         rm_logger.error(msg)
         return
-    delete(args=[cl.name], options=options, flags=flags)
+    delete(args=[db.name], options=options, flags=flags)
     

@@ -1,6 +1,7 @@
-import logging
-from program.controllers import containers
 
+import logging
+
+from program.controllers import containers
 from dependencies.lxc.lxc_classes.container import Container
 from program.platform import platform
 from dependencies.lxc import lxc
@@ -54,6 +55,7 @@ def _config_client(cl:Container):
     # Lanzamos el contenedor e instalamos modulos
     containers.init(cl); containers.start(cl)
     cl_logger.info(" Instalando lynx (puede tardar)...")
+    cl.restart() # Para evitar posibles fallos en la instalacion (dpkg)
     try:
         cl.update_apt()
         cl.install("lynx")

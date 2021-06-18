@@ -1,9 +1,8 @@
 
 import logging
 from os import remove
-from pickle import FALSE
-from dependencies import lxc
 
+from dependencies import lxc
 from program.controllers import containers
 from dependencies.register import register
 from dependencies.lxc.lxc_classes.container import Container
@@ -24,9 +23,10 @@ TAG = "load balancer"; IMG_ID = "lb_image"
 # Algoritmo de balanceo de trafico
 default_algorithm = "roundrobin"
 # Puerto en el que se va a ejecutar para aceptar conexiones de clientes
-PORT = 80
+# por defecto
+default_port = 80
 # --------------------------------------------------------------------
-def create_lb(image:str=None, balance=None) -> Container:
+def create_lb(image:str=None, balance:str=None, port:int=None) -> Container:
     """Devuelve el objeto del LB configurado
 
     Args:
@@ -53,14 +53,19 @@ def create_lb(image:str=None, balance=None) -> Container:
     lb = Container(name, image, tag=TAG)
     lb.add_to_network("eth0", with_ip="10.0.0.10")
     lb.add_to_network("eth1", with_ip="10.0.1.10")
-    setattr(lb, "port", PORT)
+    if port is None:
+        port = default_port
+    setattr(lb, "port", port)
     setattr(lb, "algorithm", balance)
     if image is None:
         lb.base_image = platform.default_image
         _config_loadbalancer(lb)
     else:
         successful = containers.init(lb)
-        if len(successful) == 0: lb = None
+        if len(successful) == 0: 
+            lb = None
+        else:
+            lb.start(); update_haproxycfg(lb); lb.stop()
     return lb
 
 def get_lb():
@@ -85,6 +90,7 @@ def _config_loadbalancer(lb:Container):
     # Configuramos el netfile
     containers.configure_netfile(lb)
     lb_logger.info(" Instalando haproxy (puede tardar)...")
+    lb.restart() # Para evitar posibles fallos en la instalacion (dpkg)
     try:
         lb.update_apt()
         lb.install("haproxy")
@@ -97,20 +103,18 @@ def _config_loadbalancer(lb:Container):
         containers.stop(lb)
     else:
         # Configurmaos el haproxy file
-        update_haproxycfg()
+        update_haproxycfg(lb)
         containers.stop(lb)
         msg = " Balanceador de carga configurado con exito\n"
         lb_logger.info(msg)
     containers.update_cs_without_notify(lb) 
 
 # --------------------------------------------------------------------
-def update_haproxycfg():
-    lb = get_lb()
-    if lb is None: return
+def update_haproxycfg(lb:Container, reset_on_fail=True):
     # Miramos si el lb esta arrancado para actualizar (si no lo 
     # haremos la proxima vez que arranque) y si lo esta esperamos
     # a que termine el startup
-    if lb.state != "RUNNING":
+    if lb is None or lb.state != "RUNNING":
         return
     # Actualizamos el fichero
     lb_logger.info(" Actualizando el fichero haproxy del balanceador...")
@@ -150,6 +154,7 @@ def update_haproxycfg():
     configured_file = base_file + config
     # Creamos el fichero haproxy.cfg lo enviamos al contenedor y
     # eliminamos el fichero que ya no nos hace falta
+    fail = False
     try:
         path = "/etc/haproxy/"; file_name = "haproxy.cfg"
         with open(file_name, "w") as file:
@@ -159,39 +164,73 @@ def update_haproxycfg():
         lb.execute(["service","haproxy","restart"])
         lb_logger.info(" Fichero haproxy actualizado con exito")
     except lxc.LxcError as err:
+        fail = True
         err_msg = f" Fallo al configurar el fichero haproxy: {err}" 
         lb_logger.error(err_msg)
-        lb.algorithm = default_algorithm
-        containers.update_cs_without_notify(lb)
-        return -1
+        err_msg = " Se utilizara la configuracion por defecto" 
+        lb_logger.warning(err_msg)
     remove("haproxy.cfg")
+    if fail: 
+        if reset_on_fail:
+            reset_config()
+        return -1
     
 # --------------------------------------------------------------------
 def change_algorithm(algorithm:str):
     global default_algorithm
-    cs = register.load(containers.ID)
-    if cs is None: 
-        lb_logger.error(" No existen contenedores en la plataforma")
-        return
-    lb = None
-    for c in cs:
-        if c.tag == TAG:
-            lb = c
-            break
+    lb:Container = get_lb()
     if lb == None:
-        err = " No existe un balanceador de carga en la plataforma"
+        err = " No existe el balanceador de carga en la plataforma"
         lb_logger.error(err)
         return
     if lb.state != "RUNNING":
         lb_logger.error(" El balanceador no se encuentra arrancado")
         return
     lb.algorithm = algorithm
-    register.update(containers.ID, cs)
-    outcome = update_haproxycfg()
+    containers.update_cs_without_notify(lb)
+    outcome = update_haproxycfg(lb, reset_on_fail=False)
     if outcome == -1:
         msg = (" Fallo al cambiar el algoritmo de balanceo, se " + 
-                "utilizara el algoritmo por defecto")
+        f"utilizara el algoritmo por defecto -> {default_algorithm}")
         lb_logger.error(msg)
+        lb.algorithm = default_algorithm
+        containers.update_cs_without_notify(lb)
+        update_haproxycfg(lb)
+        
 # --------------------------------------------------------------------
+def change_binded_port(port:int):
+    lb:Container = get_lb()
+    if lb is None:
+        msg = " No existe el balanceador de carga en la plataforma"
+        lb_logger.error(msg)
+        return 
+    msg = (" Actualizando puerto de escucha del balanceador " + 
+          f"-> {port} ...")
+    lb_logger.info(msg)
+    msg = (" Puede que algunos puertos no sean validos o no " + 
+            "permitan conexiones")
+    lb_logger.warning(msg)
+    lb.port = port
+    containers.update_cs_without_notify(lb)
+    outcome = update_haproxycfg(lb, reset_on_fail=False)
+    if outcome == -1:
+        msg = (" Fallo al cambiar el puerto de escucha, se " + 
+            f"utilizara el puerto por defecto -> {default_port}")
+        lb_logger.error(msg)
+        lb.port = default_port
+        containers.update_cs_without_notify(lb)
+        update_haproxycfg(lb)
     
-    
+# --------------------------------------------------------------------
+def reset_config():
+    lb:Container = get_lb()
+    if lb is None:
+        msg = " No existe el balanceador de carga en la plataforma"
+        lb_logger.error(msg)
+        return 
+    msg = (" Reseteando configuracion del balanceador ...")
+    lb_logger.info(msg)
+    lb.port = default_port
+    lb.algorithm = default_algorithm
+    containers.update_cs_without_notify(lb)
+    update_haproxycfg(lb)

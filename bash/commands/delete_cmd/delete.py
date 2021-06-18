@@ -8,11 +8,8 @@ from ..reused_definitions import reused_opts, reused_flags
 from program import program
 from program.platform import platform
 from ..reused_functions import get_cs
-from dependencies.utils.tools import concat_array, remove_many
-from program.controllers import bridges, containers
-from program.platform.machines import (
-    servers, load_balancer, net_devices, client, data_base
-)
+from dependencies.utils.tools import concat_array
+from program.controllers import containers
 
 def get_delete_cmd():
     cmd_name = "delete"
@@ -49,8 +46,9 @@ def delete(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={},
             se comunique con esta funcion. Por defecto esta funcion 
             no elimina contenedores que sean clientes o balanceadores
     """
-    # Miramos que contenedores son validos para eliminar
-    tags = [servers.TAG, client.TAG]
+    # Miramos que contenedores son validos para eliminar, si no se 
+    # especifica ninguno todos valen
+    tags = []
     if "tags" in extras: tags = extras["tags"]
     target_cs = get_cs(args, options, tags=tags)
     if target_cs is None: return

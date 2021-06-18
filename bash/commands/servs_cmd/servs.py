@@ -52,25 +52,25 @@ def servs(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
     if "run" in nested_cmd:
         cmd_info = nested_cmd.pop("run")
         run(**cmd_info)
-    if "stop" in nested_cmd:
+    elif "stop" in nested_cmd:
         cmd_info = nested_cmd.pop("stop")
         stop(**cmd_info)
-    if "pause" in nested_cmd:
+    elif "pause" in nested_cmd:
         cmd_info = nested_cmd.pop("pause")
         pause(**cmd_info) 
-    if "add" in nested_cmd:
+    elif "add" in nested_cmd:
         cmd_info = nested_cmd.pop("add")
         add(**cmd_info)
-    if "rm" in nested_cmd:
+    elif "rm" in nested_cmd:
         cmd_info = nested_cmd.pop("rm")
         rm(**cmd_info)
-    if "use" in nested_cmd:
+    elif "use" in nested_cmd:
         cmd_info = nested_cmd.pop("use")
         use(**cmd_info)
-    if "mark" in nested_cmd:
+    elif "mark" in nested_cmd:
         cmd_info = nested_cmd.pop("mark")
         mark(**cmd_info)
-    if "unmark" in nested_cmd:
+    elif "unmark" in nested_cmd:
         cmd_info = nested_cmd.pop("unmark")
         unmark(**cmd_info)
     

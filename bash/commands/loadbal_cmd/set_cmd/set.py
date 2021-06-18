@@ -1,8 +1,10 @@
 
+# Imports para definicion del comando
 from dependencies.cli.aux_classes import Command, Flag, Option
 from ...reused_definitions import reused_opts, reused_flags
-from .algorithm_cmd.algorithm import get_algorithm_cmd
-from .port_cmd.port import get_port_cmd
+# Imports para la funcion asociada al comando
+from .algorithm_cmd.algorithm import get_algorithm_cmd, algorithm
+from .port_cmd.port import get_port_cmd, port
 
 def get_set_cmd():
     msg = """allows to change some varibales"""
@@ -21,5 +23,10 @@ def get_set_cmd():
 
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
-def set_():
-    pass
+def set_(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
+    if "algorithm" in nested_cmd:
+        cmd_info = nested_cmd.pop("algorithm")
+        algorithm(**cmd_info)
+    elif "port" in nested_cmd:
+        cmd_info = nested_cmd.pop("port")
+        port(**cmd_info)

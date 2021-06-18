@@ -11,6 +11,7 @@ from .commands.destroy_cmd.destroy import get_destroy_cmd, destroy
 from .commands.servs_cmd.servs import get_servs_cmd, servs
 from .commands.client_cmd.client import get_client_cmd, client
 from .commands.loadbal_cmd.loadbal import get_loadbal_cmd, loadbal
+from .commands.database_cmd.database import get_database_cmd, database
 from .commands.repo_cmd.repo import get_repo_cmd, repo
 from .commands.show_cmd.show import get_show_cmd, show
 from .commands.term_cmd.term import get_term_cmd, term
@@ -45,57 +46,47 @@ def execute(cmd_line:dict):
 def config_cli() -> Cli:
     cli = Cli()
     def_reused_definitions()
-    # ++++++++++++++++++++++++++++
-    deploy_cmd = get_deploy_cmd()
-    cli.add_command(deploy_cmd)
+    # DEPLOY +++++++++++++++++++++
+    deploy_cmd = get_deploy_cmd(); cli.add_command(deploy_cmd)
     _commands[deploy_cmd.name] = deploy
-    # ++++++++++++++++++++++++++++
-    start_cmd = get_start_cmd()
-    cli.add_command(start_cmd)
+    # START ++++++++++++++++++++++
+    start_cmd = get_start_cmd(); cli.add_command(start_cmd)
     _commands[start_cmd.name] = start
-    # ++++++++++++++++++++++++++++
-    stop_cmd = get_stop_cmd()
-    cli.add_command(stop_cmd)
+    # STOP +++++++++++++++++++++++
+    stop_cmd = get_stop_cmd(); cli.add_command(stop_cmd)
     _commands[stop_cmd.name] = stop
-    # ++++++++++++++++++++++++++++
-    pause_cmd = get_pause_cmd()
-    cli.add_command(pause_cmd)
+    # PAUSE ++++++++++++++++++++++
+    pause_cmd = get_pause_cmd(); cli.add_command(pause_cmd)
     _commands[pause_cmd.name] = pause
-    # ++++++++++++++++++++++++++++
-    delete_cmd = get_delete_cmd()
-    cli.add_command(delete_cmd)
+    # DELETE +++++++++++++++++++++
+    delete_cmd = get_delete_cmd(); cli.add_command(delete_cmd)
     _commands[delete_cmd.name] = delete
-    # ++++++++++++++++++++++++++++
-    destroy_cmd = get_destroy_cmd()
-    cli.add_command(destroy_cmd)
+    # DESTROY ++++++++++++++++++++
+    destroy_cmd = get_destroy_cmd(); cli.add_command(destroy_cmd)
     _commands[destroy_cmd.name] = destroy
-    # ++++++++++++++++++++++++++++
-    servs_cmd = get_servs_cmd()
-    cli.add_command(servs_cmd)
+    # SERVS ++++++++++++++++++++++
+    servs_cmd = get_servs_cmd(); cli.add_command(servs_cmd)
     _commands[servs_cmd.name] = servs
-    # ++++++++++++++++++++++++++++
-    client_cmd = get_client_cmd()
-    cli.add_command(client_cmd)
+    # CLIENT +++++++++++++++++++++
+    client_cmd = get_client_cmd(); cli.add_command(client_cmd)
     _commands[client_cmd.name] = client
-    # ++++++++++++++++++++++++++++
-    lb_cmd = get_loadbal_cmd()
-    cli.add_command(lb_cmd)
+    # LOADBAL ++++++++++++++++++++
+    lb_cmd = get_loadbal_cmd(); cli.add_command(lb_cmd)
     _commands[lb_cmd.name] = loadbal
-    # ++++++++++++++++++++++++++++
-    repo_cmd = get_repo_cmd()
-    cli.add_command(repo_cmd)
+    # DATABASE +++++++++++++++++++
+    db_cmd = get_database_cmd(); cli.add_command(db_cmd)
+    _commands[db_cmd.name] = database
+    # REPO +++++++++++++++++++++++
+    repo_cmd = get_repo_cmd(); cli.add_command(repo_cmd)
     _commands[repo_cmd.name] = repo
-    # ++++++++++++++++++++++++++++
-    show_cmd = get_show_cmd()
-    cli.add_command(show_cmd)
+    # SHOW +++++++++++++++++++++++
+    show_cmd = get_show_cmd(); cli.add_command(show_cmd)
     _commands[show_cmd.name] = show
-    # ++++++++++++++++++++++++++++
-    term_cmd = get_term_cmd()
-    cli.add_command(term_cmd)
+    # TERM +++++++++++++++++++++++
+    term_cmd = get_term_cmd(); cli.add_command(term_cmd)
     _commands[term_cmd.name] = term
-    # ++++++++++++++++++++++++++++
-    publish_cmd = get_publish_cmd()
-    cli.add_command(publish_cmd)
+    # PUBLISH ++++++++++++++++++++
+    publish_cmd = get_publish_cmd(); cli.add_command(publish_cmd)
     _commands[publish_cmd.name] = publish
     # ---------------- Global Flags
     msg = """ 

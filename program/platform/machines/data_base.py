@@ -38,8 +38,19 @@ def create_database(image:str=None, start=False) -> Container:
         _config_database(db)
     else:
         successful = containers.init(db)
-        if len(successful) == 0: db = None
+        if len(successful) == 0: 
+            db = None
+        else:
+            db.start(); _config_mongofile(db); db.stop()
     return db
+
+def get_database():
+    cs = register.load(containers.ID)
+    if cs != None:
+        for c in cs:
+            if c.tag == TAG:
+                return c
+    return None
 
 # --------------------------------------------------------------------
 def _config_database(db:Container):
@@ -47,6 +58,7 @@ def _config_database(db:Container):
     # Lanzamos el contenedor e instalamos modulos
     containers.init(db); containers.start(db)
     db_logger.info(" Instalando mongodb (puede tardar)...")
+    db.restart() # Para evitar posibles fallos en la instalacion (dpkg)
     try:
         db.update_apt()
         db.install("mongodb")
@@ -64,8 +76,9 @@ def _config_database(db:Container):
         db_logger.info(" Base de datos configurada con exito\n")
     containers.update_cs_without_notify(db)
     
-    
 def _config_mongofile(db:Container):
+    if db is None or db.state != "RUNNING":
+        return
     msg = " Configurando el fichero mongodb de la base de datos..."
     db_logger.info(msg)
     basicfile_path = "program/resources/config_files/base_mongodb.conf"

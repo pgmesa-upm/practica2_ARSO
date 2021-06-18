@@ -13,13 +13,6 @@ app_logger = logging.getLogger(__name__)
 apps_repo_path = "program/resources/apps"
 apps_default_path = f"{apps_repo_path}/default"
 # --------------------------------------------------------------------
-def multi(func):
-    def for_each (*args, **opt_arg):
-        for arg in args:
-            func(arg, **opt_arg)
-    return for_each
-
-# --------------------------------------------------------------------
 def get_appnames() -> list:
     dirs = os.listdir(apps_repo_path)
     apps = []
@@ -55,8 +48,7 @@ def list_apps():
     print("     --> ", msg)
     
 # --------------------------------------------------------------------  
-@multi 
-def add_apps(path:str=None, name:str=None):
+def add_app(path:str, with_name:str=None):
     if path is None: return
     # Comprobamos que la ruta existe
     if not os.path.exists(path):
@@ -72,9 +64,11 @@ def add_apps(path:str=None, name:str=None):
                     "no estan permitidos")
             app_logger.error(err)
             return
+        if with_name is not None: name = with_name
         app_logger.info(f" Añadiendo app con el nombre '{name}'...")
         if name in get_appnames():
-            app_logger.error(f" La aplicacion {name} ya existe")
+            msg = f" La aplicacion {name} ya existe en el repositorio"
+            app_logger.error(msg)
             return
         if "index.html" not in os.listdir(path):
             if "ROOT" not in os.listdir(path):
@@ -105,6 +99,7 @@ def add_apps(path:str=None, name:str=None):
                     "no estan permitidos")
             app_logger.error(err)
             return
+        if with_name is not None: name = with_name
         app_logger.info(f" Añadiendo app con el nombre '{name}'...")
         app_path = f"{apps_repo_path}/{name}"
         if name in get_appnames():
@@ -199,9 +194,8 @@ def unset_default():
         app_logger.info(msg)
     msg = f" Ya no hay una aplicacion establecida por defecto"
     app_logger.info(msg)
-
-@multi     
-def remove_apps(app_name:str):
+ 
+def remove_app(app_name:str):
     base_path = apps_repo_path
     if app_name == "default" or app_name == get_defaultapp(): 
         app_name = get_defaultapp()
@@ -220,6 +214,7 @@ def clear_repository(skip:list=[]):
     if len(apps) == 0:
         app_logger.error(" El repositorio de aplicaciones esta vacio")
         return
+    removed = False
     for app_name in apps:
         if app_name in skip:
             continue
@@ -228,6 +223,12 @@ def clear_repository(skip:list=[]):
             app_name = get_defaultapp()
             base_path = apps_default_path
         process.shell(f"rm -rf {base_path}/{app_name}")
-        app_logger.info(f" App '{app_name}' eliminada")
+        removed = True
+        if app_name == get_defaultapp():
+            app_logger.info(f" App default '{app_name}' eliminada")
+        else:
+            app_logger.info(f" App '{app_name}' eliminada")
+    if not removed:
+        app_logger.warning(" No se han seleccionado apps para eliminar")
         
 # --------------------------------------------------------------------

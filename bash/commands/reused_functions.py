@@ -27,18 +27,21 @@ def get_servers_opts(options:dict, flags:list):
     return simage, names
 
 def get_lb_opts(options:dict, flags:list):
-    lbimage = _check_global_image(options, flags); algorithm = None
+    lbimage = _check_global_image(options, flags)
+    algorithm = None; port = None
     if "--lbimage" in options:
         lbimage = _check_image(options["--lbimage"][0], flags)
     if "--balance" in options:
         algorithm = options["--balance"][0]
-    return lbimage, algorithm
+    if "--port" in options:
+        port = options["--port"][0]
+    return lbimage, algorithm, port
 
 def get_cl_opts(options:dict, flags:list):
     climage = _check_global_image(options, flags); clname = "cl"
     if "--climage" in options:
         climage = _check_image(options["--climage"][0], flags)
-    with suppress(IndexError):
+    with suppress(Exception):
         clname = options["--client"][0]
     return climage, clname
 

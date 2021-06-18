@@ -1,4 +1,5 @@
 
+from bash.commands.loadbal_cmd.set_cmd.port_cmd.port import port
 import logging
 import concurrent.futures as conc
 
@@ -34,32 +35,36 @@ def get_deploy_cmd():
         extra_arg=True, choices=[1,2,3,4,5], default=2
     )
     # ++++++++++++++++++++++++++++
-    name = _def_name_opt()
-    deploy.add_option(name)
-    # ++++++++++++++++++++++++++++
-    client = _def_client_opt()
-    deploy.add_option(client)
-    # ++++++++++++++++++++++++++++
-    balance = _def_balance_opt()
-    deploy.add_option(balance)
-    # ++++++++++++++++++++++++++++
     image = _def_image_opt()
     deploy.add_option(image)
     # ++++++++++++++++++++++++++++
     simage = _def_simage_opt()
     deploy.add_option(simage)
     # ++++++++++++++++++++++++++++
+    name = _def_name_opt()
+    deploy.add_option(name)
+    # ++++++++++++++++++++++++++++
+    use = _def_use_opt()
+    deploy.add_option(use)
+    # ++++++++++++++++++++++++++++
     lbimage = _def_lbimage_opt()
     deploy.add_option(lbimage)
+    # ++++++++++++++++++++++++++++
+    balance = _def_balance_opt()
+    deploy.add_option(balance)
+    # ++++++++++++++++++++++++++++
+    port = _def_port_opt()
+    deploy.add_option(port)
     # ++++++++++++++++++++++++++++
     dbimage = _def_dbimage_opt()
     deploy.add_option(dbimage)
     # ++++++++++++++++++++++++++++
+    client = _def_client_opt()
+    deploy.add_option(client)
+    # ++++++++++++++++++++++++++++
     climage = _def_climage_opt()
     deploy.add_option(climage)
-    # ++++++++++++++++++++++++++++
-    use = _def_use_opt()
-    deploy.add_option(use)
+    
     # Flags ---------------------- 
     deploy.add_flag(reused_flags["-l"])
     deploy.add_flag(reused_flags["-t"])
@@ -69,6 +74,29 @@ def get_deploy_cmd():
 
 # --------------------------------------------------------------------
 # -------------------------------------------------------------------- 
+def _def_image_opt():
+    msg = """ 
+    <alias or fingerprint> allows to specify the image of the
+    containers, by default ubuntu:18.04 is used
+    """
+    image = Option(
+        "--image", description=msg, 
+        extra_arg=True, mandatory=True
+    )
+    return image
+
+# -------------------------------------------------------------------- 
+def _def_simage_opt():
+    msg = """ 
+    <alias or fingerprint> allows to specify the image of the 
+    servers
+    """
+    simage = Option(
+        "--simage", description=msg, 
+        extra_arg=True, mandatory=True
+    )
+    return simage
+
 def _def_name_opt():
     msg = """
     <server_names> allows to specify the names of the servers"""
@@ -77,13 +105,29 @@ def _def_name_opt():
         extra_arg=True, mandatory=True, multi=True
     )
     return name
-def _def_client_opt():
+
+def _def_use_opt():
     msg = """ 
-    <void or client_name> creates a client connected to the load 
-    balancer
+    <app_name> allows to specify the app that will be deployed
+    in the servers (if they are being runned)
     """
-    client = Option("--client", description=msg, extra_arg=True)
-    return client
+    use = Option(
+        "--use", description=msg, 
+        extra_arg=True, mandatory=True
+    )
+    return use
+
+# -------------------------------------------------------------------- 
+def _def_lbimage_opt():
+    msg = """ 
+    <alias or fingerprint> allows to specify the image of the 
+    load balancer
+    """
+    lbimgae = Option(
+        "--lbimage", description=msg, 
+        extra_arg=True, mandatory=True
+    )
+    return lbimgae
 
 def _def_balance_opt():
     msg = """ 
@@ -97,39 +141,16 @@ def _def_balance_opt():
     )
     return balance
 
-def _def_image_opt():
-    msg = """ 
-    <alias or fingerprint> allows to specify the image of the
-    containers, by default ubuntu:18.04 is used
-    """
-    image = Option(
-        "--image", description=msg, 
+def _def_port_opt():
+    msg = """<port_number> changes the port where the load balancer
+    is listening (default -> 80)"""
+    port = Option(
+        "--port", description=msg, 
         extra_arg=True, mandatory=True
     )
-    return image
+    return port
 
-def _def_simage_opt():
-    msg = """ 
-    <alias or fingerprint> allows to specify the image of the 
-    servers
-    """
-    simage = Option(
-        "--simage", description=msg, 
-        extra_arg=True, mandatory=True
-    )
-    return simage
-
-def _def_lbimage_opt():
-    msg = """ 
-    <alias or fingerprint> allows to specify the image of the 
-    load balancer
-    """
-    lbimgae = Option(
-        "--lbimage", description=msg, 
-        extra_arg=True, mandatory=True
-    )
-    return lbimgae
-
+# -------------------------------------------------------------------- 
 def _def_dbimage_opt():
     msg = """ 
     <alias or fingerprint> allows to specify the image of the 
@@ -141,6 +162,15 @@ def _def_dbimage_opt():
     )
     return dbimage
 
+# --------------------------------------------------------------------
+def _def_client_opt():
+    msg = """ 
+    <void or client_name> creates a client connected to the load 
+    balancer
+    """
+    client = Option("--client", description=msg, extra_arg=True)
+    return client
+ 
 def _def_climage_opt():
     msg = """ 
     <alias or fingerprint> allows to specify the image of the 
@@ -151,17 +181,6 @@ def _def_climage_opt():
         extra_arg=True, mandatory=True
     )
     return climage
-
-def _def_use_opt():
-    msg = """ 
-    <app_name> allows to specify the app that will be deployed
-    in the servers (if they are being runned)
-    """
-    use = Option(
-        "--use", description=msg, 
-        extra_arg=True, mandatory=True
-    )
-    return use
 
 # -------------------------------------------------------------------- 
 # -------------------------------------------------------------------- 
@@ -194,7 +213,7 @@ def deploy(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
     # Creando contenedores
     num_servs = args[0]
     dbimage = get_db_opts(options, flags)
-    lbimage, algorithm = get_lb_opts(options, flags)
+    lbimage, algorithm, port = get_lb_opts(options, flags)
     if "--client" in options:
         climage, clname = get_cl_opts(options, flags)
     simage, names = get_servers_opts(options, flags)
@@ -203,7 +222,9 @@ def deploy(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
     if "-s" in flags:
         db = data_base.create_database(image=dbimage)
         if db is not None: successful_cs.append(db)
-        lb = load_balancer.create_lb(image=lbimage, balance=algorithm)
+        lb = load_balancer.create_lb(
+            image=lbimage, balance=algorithm, port=port
+        )
         if lb is not None: successful_cs.append(lb)
         if "--client" in options:
             cl = client.create_client(name=clname, image=climage)
@@ -219,7 +240,8 @@ def deploy(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
             )
             threads.append(db_thread)
             lb_thread = executor.submit(
-                load_balancer.create_lb, image=lbimage, balance=algorithm
+                load_balancer.create_lb, 
+                image=lbimage, balance=algorithm, port=port
             )
             threads.append(lb_thread)
             if "--client" in options:

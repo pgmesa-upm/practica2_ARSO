@@ -182,7 +182,8 @@ class Container:
         if self.state != RUNNING:
             err = f" {self.tag} '{self.name}' no esta arrancado"
             raise LxcError(err)
-        lxc.run(["lxc", "restart", self.name])
+        self.stop()
+        self.start()
         
     def start(self):
         """Arranca el contenedor

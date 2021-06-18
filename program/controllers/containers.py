@@ -12,7 +12,7 @@ else:
         catch_foreach_thread as catch_foreach
     )
 from dependencies.lxc.lxc_classes.container import Container, LxcError
-from program.platform.machines import servers
+from program.platform.machines import load_balancer, servers
 
 # ------------------ CONTROLADOR DE CONTENEDORES ---------------------
 # --------------------------------------------------------------------

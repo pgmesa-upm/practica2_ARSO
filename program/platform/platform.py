@@ -2,7 +2,9 @@
 import logging
 from program.platform.machines import data_base
 
-from dependencies.utils.tools import pretty, objectlist_as_dict
+from dependencies.utils.tools import (
+    pretty, objectlist_as_dict, remove_many, remove_ntimes
+)
 from dependencies.lxc import lxc
 from program.controllers import containers, bridges
 from dependencies.register import register
@@ -89,7 +91,8 @@ def update_conexions():
         return
     # Actualizamos los servidores conectados al balanceador de carga
     if updates.get("s_state", False):
-        load_balancer.update_haproxycfg()
+        lb = load_balancer.get_lb()
+        load_balancer.update_haproxycfg(lb, reset_on_fail=False)
     # Realizamos las conexiones de los contenedores a los bridge
     cs = register.load(containers.ID)
     bgs = register.load(bridges.ID)
@@ -138,40 +141,61 @@ def update_conexions():
     register.update("updates", {})
         
 # --------------------------------------------------------------------
-def print_state():
+def print_state(machines:list=[]):
     """Muestra por consola el estado de los objetos del programa 
     (contenedores y bridges)"""
-    cs = register.load(register_id=containers.ID)
-    bgs = register.load(register_id=bridges.ID)
     if not is_deployed():
         print("--> La plataforma esta vacia, no ha sido desplegada")
-    print(" + CONTENEDORES")
-    if cs != None:
-        pairs = [
-            ("name", "tag"), 
-            ("state", "started_up"), 
-            ("networks", "connected_networks"),
-        ]
-        attrs_order = [
-            "name", "state", "networks", "base_image", "marked"
-        ]
-        for c in cs:
-            extra_pairs = []
-            if c.tag == servers.TAG:
-                extra_pairs = [("base_image", "app")]
-            elif c.tag == load_balancer.TAG:
-                extra_pairs = [("base_image", "algorithm")]
-            print(pretty(
-                c, *(pairs+extra_pairs), firstcolum_order=attrs_order
-            ))
+    # Vemos los contenedores a mostrar
+    ex_cs = register.load(register_id=containers.ID)
+    ex_bgs = register.load(register_id=bridges.ID)
+    if len(machines) > 0:
+        cs = []
+        for c in ex_cs:
+            if c.name in machines:
+                cs.append(c)
+                remove_ntimes(machines, c.name)
+        # Vemos los bridges a mostrar
+        bgs = []
+        for bg in ex_bgs:
+            if bg.name in machines:
+                bgs.append(bg)
+                remove_ntimes(machines, bg.name)
     else:
-        print("     No hay contenedores creados en la plataforma")
-    print(" + BRIDGES")
-    if bgs != None:       
-        for b in bgs:
-            print(pretty(b))
-    else:
-        print("     No hay bridges creados en la plataforma")
+        cs = ex_cs; bgs = ex_bgs
+    # Las que sigan quedando en la lista es que no existen en el programa
+    for m in machines:
+        msg = f" La maquina '{m}' no existe en el programa"
+        plt_logger.error(msg)
+    if cs is None or len(cs) > 0:
+        print(" + CONTENEDORES")
+        if cs is not None:
+            pairs = [
+                ("name", "tag"), 
+                ("state", "started_up"), 
+                ("networks", "connected_networks"),
+            ]
+            attrs_order = [
+                "name", "state", "networks", "base_image", "marked"
+            ]
+            for c in cs:
+                extra_pairs = []
+                if c.tag == servers.TAG:
+                    extra_pairs = [("base_image", "app")]
+                elif c.tag == load_balancer.TAG:
+                    extra_pairs = [("base_image", "algorithm")]
+                print(pretty(
+                    c, *(pairs+extra_pairs), firstcolum_order=attrs_order
+                ))
+        else:
+            print("     No hay contenedores creados en la plataforma")
+    if bgs is None or len(bgs) > 0:
+        print(" + BRIDGES")
+        if bgs is not None:       
+            for b in bgs:
+                print(pretty(b))
+        else:
+            print("     No hay bridges creados en la plataforma")
 
 def print_info():
     print("""

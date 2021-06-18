@@ -2,6 +2,7 @@
 from math import floor, ceil
 from contextlib import suppress
 import re
+import copy
 
 # -------------------------- HERRAMIENTAS ----------------------------
 # --------------------------------------------------------------------
@@ -286,4 +287,16 @@ def remove_many(remove_in:list, *remove):
         with suppress(Exception):
             remove_in.remove(r)
 
-# --------------------------------------------------------------------  
+# --------------------------------------------------------------------
+def remove_ntimes(array:list, *elements_to_remove, times:int=None):
+    if times == None: times = -1
+    array_cp = copy.deepcopy(array)
+    for elem in elements_to_remove:
+        removed = 0
+        for elem_arr in array_cp:
+            if removed == times:
+                break
+            if elem == elem_arr:
+                array.remove(elem_arr)
+                removed += 1
+        

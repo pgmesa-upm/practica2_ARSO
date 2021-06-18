@@ -9,8 +9,6 @@ from .setdef_cmd.setdef import get_setdef_cmd, setdef
 from .unsetdef_cmd.unsetdef import get_unsetdef_cmd, unsetdef
 from .list_cmd.list import get_list_cmd, ls
 from .clear_cmd.clear import get_clear_cmd, clear
-# Imports para la funcion asociada al comando
-from program import apps_handler as apps_h
 
 # --------------------------------------------------------------------
 def get_apps_cmd():
@@ -34,7 +32,7 @@ def get_apps_cmd():
     # ++++++++++++++++++++++++++++
     ls = get_list_cmd()
     apps.nest_cmd(ls)
-    # ++++++++++++++++++++++++++++-
+    # ++++++++++++++++++++++++++++
     clear = get_clear_cmd()
     apps.nest_cmd(clear)
     
@@ -46,59 +44,18 @@ def apps(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
     if "add" in nested_cmd:
         cmd_info = nested_cmd.pop("add")
         add(**cmd_info)
-    if "rm" in nested_cmd:
+    elif "rm" in nested_cmd:
         cmd_info = nested_cmd.pop("rm")
         rm(**cmd_info)
-    if "setdef" in nested_cmd:
+    elif "setdef" in nested_cmd:
         cmd_info = nested_cmd.pop("setdef")
         setdef(**cmd_info)
-    if "unsetdef" in nested_cmd:
+    elif "unsetdef" in nested_cmd:
         cmd_info = nested_cmd.pop("unsetdef")
         unsetdef(**cmd_info)
-    if "list" in nested_cmd:
+    elif "list" in nested_cmd:
         cmd_info = nested_cmd.pop("list")
         ls(**cmd_info)
-    if "clear" in nested_cmd:
+    elif "clear" in nested_cmd:
         cmd_info = nested_cmd.pop("clear")
         clear(**cmd_info)
-    
-    
-    
-    
-    # if "add" in options:
-    #     apps_h.add_apps(*options["add"]["args"])
-    # elif "use" in options:
-    #     servs = []
-    #     if "--on" in options["use"]["options"]:
-    #         servs = options["use"]["options"]["--on"]["args"]
-    #     apps_h.use_app(options["use"]["args"][0], *servs)
-    #     if "-m" in flags:
-    #         apps_h.mark_apps()
-    # elif "setdef" in options:
-    #     apps_h.set_default(options["setdef"]["args"][0])
-    # elif "unsetdef" in options:
-    #     apps_h.unset_default()
-    # elif "list" in options:
-    #     apps_h.list_apps()
-    # elif "rm" in options:
-    #     app_names = options["rm"]["args"]
-    #     if not "-y" in flags:
-    #         default = apps_h.get_defaultapp()
-    #         if default in app_names:
-    #             print(f"La app '{default}' esta establecida como " + 
-    #                 "default")
-    #             question = "¿Eliminar la app de todas formas?(y/n): "
-    #             answer = str(input(question))
-    #             if answer.lower() != "y": return
-    #     apps_h.remove_apps(*app_names)
-    # elif "emptyrep" in options:
-    #     skip = []
-    #     if not "-y" in flags:
-    #         msg = ("Se eliminaran todas las aplicaciones del " +
-    #             "repositorio local")
-    #         print(msg)
-    #         answer = str(input("¿Estas seguro?(y/n): "))
-    #         if answer.lower() != "y": return
-    #         answer = str(input("¿Eliminar tambien default?(y/n): "))
-    #         if answer.lower() != "y": skip = [apps_h.get_defaultapp()]
-    #     apps_h.clear_repository(skip=skip)
