@@ -69,6 +69,6 @@ def _config_client(cl:Container):
     else:
         containers.stop(cl)
         cl_logger.info(" Cliente configurado con exito\n")
-    containers.update_cs_without_notify(cl)
+    containers.update_containers(cl)
 
 # --------------------------------------------------------------------

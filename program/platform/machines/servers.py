@@ -95,9 +95,9 @@ def _config_servs(*servs, image=None) -> list:
                                 "error de lxc: " + str(err))
             serv_logger.error(err_msg)
             image = platform.default_image
-            setattr(serv, "config_error", True)
+            setattr(serv, "has_config_error", True)
             for s in servs:
-                setattr(s, "config_error", True)
+                setattr(s, "has_config_error", True)
             containers.stop(serv)
         else:
             _publish_tomcat_image(serv)
@@ -105,7 +105,6 @@ def _config_servs(*servs, image=None) -> list:
                    "realizada con exito\n")
             serv_logger.info(msg)
         successful.append(serv)
-
     if image == None:
         image_saved = register.load(IMG_ID)
         alias = image_saved["alias"]
@@ -172,7 +171,7 @@ def change_app(server:Container, app_path:str, name:str):
                 "realizada con exito")
     server.app = name
     server.marked = False
-    containers.update_cs_without_notify(server)
+    containers.update_containers(server)
     serv_logger.info(msg)
 
 # --------------------------------------------------------------------
@@ -240,7 +239,7 @@ def mark_htmlindexes(s:Container, undo=False):
     word2 = word1.lower().replace("n", "")
     serv_logger.info(f" Servidor '{s.name}' {word2}")
     os.remove("index.html")
-    containers.update_cs_without_notify(s)
+    containers.update_containers(s)
     
 # --------------------------------------------------------------------
 def _process_names(num:int, *names) -> list:

@@ -107,7 +107,7 @@ def _config_loadbalancer(lb:Container):
         containers.stop(lb)
         msg = " Balanceador de carga configurado con exito\n"
         lb_logger.info(msg)
-    containers.update_cs_without_notify(lb) 
+    containers.update_containers(lb) 
 
 # --------------------------------------------------------------------
 def update_haproxycfg(lb:Container, reset_on_fail=True):
@@ -185,14 +185,14 @@ def change_algorithm(algorithm:str):
         lb_logger.error(" El balanceador no se encuentra arrancado")
         return
     lb.algorithm = algorithm
-    containers.update_cs_without_notify(lb)
+    containers.update_containers(lb)
     outcome = update_haproxycfg(lb, reset_on_fail=False)
     if outcome == -1:
         msg = (" Fallo al cambiar el algoritmo de balanceo, se " + 
         f"utilizara el algoritmo por defecto -> {default_algorithm}")
         lb_logger.error(msg)
         lb.algorithm = default_algorithm
-        containers.update_cs_without_notify(lb)
+        containers.update_containers(lb)
         update_haproxycfg(lb)
         
 # --------------------------------------------------------------------
@@ -212,14 +212,14 @@ def change_binded_port(port:int):
             "permitan conexiones")
     lb_logger.warning(msg)
     lb.port = port
-    containers.update_cs_without_notify(lb)
+    containers.update_containers(lb)
     outcome = update_haproxycfg(lb, reset_on_fail=False)
     if outcome == -1:
         msg = (" Fallo al cambiar el puerto de escucha, se " + 
             f"utilizara el puerto por defecto -> {default_port}")
         lb_logger.error(msg)
         lb.port = default_port
-        containers.update_cs_without_notify(lb)
+        containers.update_containers(lb)
         update_haproxycfg(lb)
     
 # --------------------------------------------------------------------
@@ -236,5 +236,5 @@ def reset_config():
     lb_logger.info(msg)
     lb.port = default_port
     lb.algorithm = default_algorithm
-    containers.update_cs_without_notify(lb)
+    containers.update_containers(lb)
     update_haproxycfg(lb)

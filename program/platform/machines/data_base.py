@@ -74,7 +74,7 @@ def _config_database(db:Container):
         _config_mongofile(db)
         containers.stop(db)
         db_logger.info(" Base de datos configurada con exito\n")
-    containers.update_cs_without_notify(db)
+    containers.update_containers(db)
     
 def _config_mongofile(db:Container):
     if db is None or db.state != "RUNNING":

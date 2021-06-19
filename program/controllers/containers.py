@@ -30,6 +30,13 @@ cs_logger = logging.getLogger(__name__)
 def init(c:Container=None):            
     cs_logger.info(f" Inicializando {c.tag} '{c.name}'...")
     c.init()
+    register.update(
+        "updates", True, override=False, dict_id="cs_num"
+    ) 
+    if c.tag == servers.TAG:
+        register.update(
+            "updates", True, override=False, dict_id="s_num"
+        ) 
     cs_logger.info(f" {c.tag} '{c.name}' inicializado con exito")
     _add_container(c)
     
@@ -38,6 +45,13 @@ def init(c:Container=None):
 def start(c:Container=None):
     cs_logger.info(f" Arrancando {c.tag} '{c.name}'...")
     c.start()
+    register.update(
+        "updates", True, override=False, dict_id="cs_state"
+    ) 
+    if c.tag == servers.TAG:
+        register.update(
+            "updates", True, override=False, dict_id="s_state"
+        )
     cs_logger.info(f" {c.tag} '{c.name}' arrancado con exito")
     _update_container(c)
         
@@ -46,6 +60,13 @@ def start(c:Container=None):
 def pause(c:Container=None):
     cs_logger.info(f" Pausando {c.tag} '{c.name}'...")
     c.pause()
+    register.update(
+        "updates", True, override=False, dict_id="cs_state"
+    ) 
+    if c.tag == servers.TAG:
+        register.update(
+            "updates", True, override=False, dict_id="s_state"
+        )
     cs_logger.info(f" {c.tag} '{c.name}' pausado con exito")
     _update_container(c)
         
@@ -54,6 +75,13 @@ def pause(c:Container=None):
 def stop(c:Container=None):
     cs_logger.info(f" Deteniendo {c.tag} '{c.name}'...")
     c.stop()
+    register.update(
+        "updates", True, override=False, dict_id="cs_state"
+    ) 
+    if c.tag == servers.TAG:
+        register.update(
+            "updates", True, override=False, dict_id="s_state"
+        )
     cs_logger.info(f" {c.tag} '{c.name}' detenido con exito")
     _update_container(c)
 
@@ -65,6 +93,13 @@ def delete(c:Container=None):
         _update_container(c) 
     cs_logger.info(f" Eliminando {c.tag} '{c.name}'...")
     c.delete()
+    register.update(
+        "updates", True, override=False, dict_id="cs_num"
+    ) 
+    if c.tag == servers.TAG:
+        register.update(
+            "updates", True, override=False, dict_id="s_num"
+        )
     cs_logger.info(f" {c.tag} '{c.name}' eliminado con exito")
     _update_container(c, remove=True)
 
@@ -130,34 +165,11 @@ def configure_netfile(c:Container):
     remove(file2)
     
 # -------------------------------------------------------------------- 
-def update_cs_without_notify(*cs_to_update, remove:bool=False):
-    cs = register.load(ID)
-    if cs == None:
-        c = cs_to_update[0]
-        _add_container(c)
-        cs_to_update = list(cs_to_update).remove(c)
-        cs = [c]
-    cs_dict = objectlist_as_dict(cs, key_attribute="name")
-    for c in cs_to_update:
-        if c.name in cs_dict:
-            if remove:
-                cs_dict.pop(c.name)
-            else:
-                cs_dict[c.name] = c
-            break
-        else:
-            if not remove:
-                cs_dict[c.name] = c
-    if len(cs_dict) == 0:
-        register.remove(ID)
-    else:
-        register.update(ID, list(cs_dict.values()))
-        
-def update_cs_and_notify(*cs_to_update, remove:bool=False):
-    for c in cs_to_update:
+def update_containers(*cs, remove:bool=False):
+    for c in cs:
         _update_container(c, remove=remove)
    
-def _update_container(c_to_update:Container, remove:bool=False):
+def _update_container(c:Container, remove:bool=False):
     """Actualiza el objeto de un contenedor en el registro
 
     Args:
@@ -165,27 +177,24 @@ def _update_container(c_to_update:Container, remove:bool=False):
         remove (bool, optional): Si es verdadero, se elimina el
             contenedor del registro. Por defecto es False
     """
-    if remove:
-        register.update(
-            "updates", True, override=False, dict_id="cs_num"
-        ) 
-        if c_to_update.tag == servers.TAG:
-            register.update(
-                "updates", True, override=False, dict_id="s_num"
-            )
+    cs = register.load(ID)
+    if cs == None:
+        _add_container(c)
+        return
+    cs_dict = objectlist_as_dict(cs, key_attribute="name")
+    if c.name in cs_dict:
+        if remove:
+            cs_dict.pop(c.name)
+        else:
+            cs_dict[c.name] = c
     else:
-        register.update(
-            "updates", True, override=False, dict_id="cs_state"
-        ) 
-        if c_to_update.tag == servers.TAG:
-            register.update(
-                "updates", True, override=False, dict_id="s_state"
-            )
-    if register.load(ID) is None:
-        _add_container(c_to_update)
+        if not remove:
+            cs_dict[c.name] = c
+    if len(cs_dict) == 0:
+        register.remove(ID)
     else:
-        update_cs_without_notify(c_to_update, remove=remove)
-
+        register.update(ID, list(cs_dict.values()))
+    
 def _add_container(c_to_add:Container):
     """Añade un contenedor al registro
 
@@ -197,11 +206,5 @@ def _add_container(c_to_add:Container):
         register.add(ID, [c_to_add])
     else:
         register.update(ID, c_to_add, override=False)
-    register.update(
-        "updates", True, override=False, dict_id="cs_num"
-    ) 
-    if c_to_add.tag == servers.TAG:
-        register.update(
-            "updates", True, override=False, dict_id="s_num"
-        ) 
+    
 # --------------------------------------------------------------------
