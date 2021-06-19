@@ -2,6 +2,9 @@
 from .aux_classes import Command, Flag
 from .cli_utils import format_str
 
+from .external_dep import colorama
+from .external_dep.colorama import Fore, Back, Style
+
 # import colorama
 # from colorama import Fore, Back, Style
 
@@ -264,7 +267,7 @@ class Cli:
                     inFlags.append(validFlag)
       
     def print_help(self, command=None, with_colors=True, with_format=True):
-        # colorama.init()
+        colorama.init()
         """Imprime las descripciones de cada comando y flag de la cli
         de forma estructurada"""
         self.printed = True
@@ -296,8 +299,7 @@ class Cli:
                   with_colors=with_colors, with_format=with_format):
             if with_format:
                 if with_colors:
-                    # Back.BLACK +
-                    return   color +  line + colors.ENDC
+                    return  Back.BLACK + color +  line + colors.ENDC
                 elif color == colors.BOLD or color == colors.UNDERLINE:
                     return color  + line + colors.ENDC
             return line
