@@ -2,6 +2,8 @@
 from .aux_classes import Command, Flag
 from .cli_utils import format_str
 
+import colorama
+from colorama import Fore, Back, Style
 
 class Cli:
     """Interfaz que se encarga de controlar que la linea de comandos
@@ -261,7 +263,8 @@ class Cli:
                                 )
                     inFlags.append(validFlag)
       
-    def print_help(self, command=None):
+    def print_help(self, command=None, with_colors=True, with_format=True):
+        colorama.init()
         """Imprime las descripciones de cada comando y flag de la cli
         de forma estructurada"""
         self.printed = True
@@ -289,8 +292,14 @@ class Cli:
                 untabbed = string
             return untabbed 
         
-        def paint(line:str, color):
-            return color + line + colors.ENDC
+        def paint(line:str, color:str, 
+                  with_colors=with_colors, with_format=with_format):
+            if with_format:
+                if with_colors:
+                    return  Back.BLACK + color +  line + colors.ENDC
+                elif color == colors.BOLD or color == colors.UNDERLINE:
+                    return color  + line + colors.ENDC
+            return line
             
         def print_recursively(cmd:Command, i:int):
             nested_cmd = cmd.nested_cmd.values()
