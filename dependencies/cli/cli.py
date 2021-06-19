@@ -313,7 +313,9 @@ class Cli:
                         indent=opt_indent+opt_first_line_diff + extra_indent
                     )
                     formatted = formatted.replace(
-                        n_cmd.name, paint(n_cmd.name, colors.OKCYAN), 1
+                        n_cmd.name, 
+                        paint(paint(n_cmd.name, colors.OKCYAN), colors.BOLD), 
+                        1
                     )
                     print(formatted)
                     print_recursively(n_cmd, i+1)
@@ -343,7 +345,9 @@ class Cli:
                             indent=opt_indent+opt_first_line_diff + extra_indent
                         )
                         formatted = formatted.replace(
-                            elem.name, paint(elem.name, color), 1
+                            elem.name, 
+                            paint(paint(elem.name, color), colors.BOLD),
+                            1
                         )
                         print(formatted)
                     
@@ -366,7 +370,9 @@ class Cli:
                 formatted, indent=cmd_indent+cmd_first_line_diff
             )
             formatted = formatted.replace(
-                cmd.name, paint(paint(cmd.name, colors.WARNING), colors.BOLD), 1
+                cmd.name, 
+                paint(paint(cmd.name, colors.WARNING), colors.BOLD),
+                1
             )
             print(formatted)
             print_recursively(cmd, 0)
@@ -385,7 +391,9 @@ class Cli:
                     formatted, indent=cmd_indent+cmd_first_line_diff
                 )
                 formatted = formatted.replace(
-                    flag.name, paint(flag.name, colors.WARNING), 1
+                    flag.name,
+                    paint(paint(flag.name, colors.WARNING), colors.BOLD),
+                    1
                 )
                 print(formatted)
 
