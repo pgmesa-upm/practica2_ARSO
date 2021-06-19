@@ -82,7 +82,7 @@ def add(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
     image, balance, port = get_lb_opts(options, flags)
     lb = load_balancer.create_lb(image=image, balance=balance, port=port)
     if lb is not None:
-        program.list_lxc_containers() 
+        program.list_lxc_containers(lb) 
         msg = (f" Balanceador '{lb}' inicializado\n")
         add_logger.info(msg)
         add_logger.info(" Estableciendo conexiones ...")

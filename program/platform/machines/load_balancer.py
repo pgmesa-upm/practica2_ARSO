@@ -167,8 +167,6 @@ def update_haproxycfg(lb:Container, reset_on_fail=True):
         fail = True
         err_msg = f" Fallo al configurar el fichero haproxy: {err}" 
         lb_logger.error(err_msg)
-        err_msg = " Se utilizara la configuracion por defecto" 
-        lb_logger.warning(err_msg)
     remove("haproxy.cfg")
     if fail: 
         if reset_on_fail:
@@ -204,6 +202,9 @@ def change_binded_port(port:int):
         msg = " No existe el balanceador de carga en la plataforma"
         lb_logger.error(msg)
         return 
+    if lb.state != "RUNNING":
+        lb_logger.error(" El balanceador no se encuentra arrancado")
+        return
     msg = (" Actualizando puerto de escucha del balanceador " + 
           f"-> {port} ...")
     lb_logger.info(msg)
@@ -228,6 +229,9 @@ def reset_config():
         msg = " No existe el balanceador de carga en la plataforma"
         lb_logger.error(msg)
         return 
+    if lb.state != "RUNNING":
+        lb_logger.error(" El balanceador no se encuentra arrancado")
+        return
     msg = (" Reseteando configuracion del balanceador ...")
     lb_logger.info(msg)
     lb.port = default_port

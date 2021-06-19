@@ -44,8 +44,8 @@ def pause(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={},
     if target_cs is None: return
     msg = f" Pausando contenedores '{concat_array(target_cs)}'..."
     pause_logger.info(msg)
-    succesful_cs = containers.pause(*target_cs)
-    program.list_lxc_containers()
-    cs_s = concat_array(succesful_cs)
+    successful_cs = containers.pause(*target_cs)
+    program.list_lxc_containers(*successful_cs)
+    cs_s = concat_array(successful_cs)
     msg = (f" Los contenedores '{cs_s}' han sido pausados \n")
     pause_logger.info(msg)

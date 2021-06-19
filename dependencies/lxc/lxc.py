@@ -63,22 +63,25 @@ def Popen(cmd:list):
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
 def _lxc_generic_list(cmd:list, print_:bool=False, 
-                                print_format:str="table") -> dict:
-    if print_format not in _lxc_list_formats:
-        raise LxcError(f" El formato {print_format} no es valido")
-    out = run(cmd + ["--format", print_format])
+                        format_:str="table", as_str=False) -> dict:
+    if format_ not in _lxc_list_formats:
+        raise LxcError(f" El formato {format} no es valido")
+    out = run(cmd + ["--format", format_])
     out = out[:-1]
     if print_:
-        if print_format == "json":
+        if format_ == "json":
             json_list = json.loads(out)
             out = json.dumps(json_list, indent=4, sort_keys=True)
         print(out)
     # Devuelve una lista con la informacion de cada imagen en
     # forma de diccionario
-    csv = run(cmd + ["--format", "csv"])
-    return _process_lxccsv(csv)
+    if as_str:
+        return out
+    else:
+        csv = run(cmd + ["--format", "csv"])
+        return _process_lxccsv(csv)
 
-def lxc_list(print_:bool=False, print_format:str="table") -> dict:
+def lxc_list(print_:bool=False, format_:str="table", as_str=False) -> dict:
     """Se encarga de mostrar la lista de contenedores de lxc, pero 
     en caso de estar arrancados, como la ip tarda un rato en
     aparecer, la funcion espera a que se haya cargado toda la
@@ -87,8 +90,10 @@ def lxc_list(print_:bool=False, print_format:str="table") -> dict:
     cs_infolist = _lxc_generic_list(
         ["lxc", "list"],
         print_=print_, 
-        print_format=print_format
+        format_=format_,
+        as_str=as_str
     )
+    if as_str: return cs_infolist
     # Cambiamos la forma de presentar el diccionario
     cs_infodict= {}
     headers = ["NAME", "STATE", "IPV4", "IPV6", "TYPE", "SNAPSHOTS"]
@@ -110,13 +115,15 @@ def lxc_list(print_:bool=False, print_format:str="table") -> dict:
         cs_infodict[name]["IPV4"] = nets
     return cs_infodict
     
-def lxc_network_list(print_=False, print_format="table") -> dict:
+def lxc_network_list(print_=False, format_="table", as_str=False) -> dict:
     """Muestra la network list de lxc (bridges creados)"""
     bgs_infolist = _lxc_generic_list(
         ["lxc", "network", "list"],
         print_=print_, 
-        print_format=print_format
+        format_=format_,
+        as_str=as_str
     )
+    if as_str: return bgs_infolist
     # Cambiamos la forma de presentar el diccionario
     bgs_infodict= {}
     headers = ["NAME", "TYPE", "MANAGED", "DESCRIPTION", "USED BY"]
@@ -125,12 +132,14 @@ def lxc_network_list(print_=False, print_format="table") -> dict:
     return bgs_infodict
     
 
-def lxc_image_list(print_=False, print_format="table") -> dict:
+def lxc_image_list(print_=False, format_="table", as_str=False) -> dict:
     image_infolist = _lxc_generic_list(
         ["lxc", "image", "list"],
         print_=print_, 
-        print_format=print_format
+        format_=format_,
+        as_str=as_str
     )
+    if as_str: return image_infolist 
     # Cambiamos la forma de presentar el diccionario
     images_infodict= {}
     headers = ["ALIAS", "FINGERPRINT", "PUBLIC", "DESCRIPTION",
@@ -138,6 +147,47 @@ def lxc_image_list(print_=False, print_format="table") -> dict:
     for im_info in image_infolist:
         images_infodict[im_info[1]] = dict(zip(headers, im_info))
     return images_infodict
+
+def filter_lxc_table(table, *elements):
+    splitted = table.split("\n")
+    def is_dash_line(string) -> bool:
+        for i in range(len(string)):
+            char = string[i]
+            if char != "-" and char != "+":
+                break
+        else:
+            return True
+        return False
+    dash_line = splitted.pop(0)
+    headers = splitted.pop(0)
+    valid_rows = []
+    last_was_dash = True
+    last_was_valid = False
+    for line in splitted:
+        if is_dash_line(line):
+            last_was_dash = True
+            last_was_valid = False
+            continue
+        for elem in elements:
+            if " " + elem + " " in line:
+                valid_rows.append(line)
+                last_was_valid = True
+                break
+        else:
+            if not last_was_dash and last_was_valid:
+                valid_rows.append(None)
+                valid_rows.append(line)
+                last_was_valid = True
+        last_was_dash = False
+    filtered_table = f"{dash_line}\n{headers}\n{dash_line}"
+    if len(valid_rows) == 0: return ""
+    for valid in valid_rows:
+        if valid is None:
+            lenght = len(filtered_table) - len(dash_line) - 1
+            filtered_table = filtered_table[:lenght]
+        else:
+            filtered_table += f"\n{valid}\n{dash_line}"
+    return filtered_table
     
 # --------------------------------------------------------------------   
 def _process_lxccsv(string:str) -> list:

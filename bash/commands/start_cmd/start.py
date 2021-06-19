@@ -71,7 +71,7 @@ def start(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={},
     msg = f" Arrancando contenedores '{concat_array(target_cs)}'..."
     start_logger.info(msg)
     succesful_cs = containers.start(*target_cs)
-    program.list_lxc_containers()
+    program.list_lxc_containers(*succesful_cs)
     cs_s = concat_array(succesful_cs)
     msg = (f" Los contenedores '{cs_s}' han sido arrancados \n")
     start_logger.info(msg)

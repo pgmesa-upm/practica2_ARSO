@@ -83,7 +83,7 @@ def add(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
             return
     image, names = get_servers_opts(options, flags)
     servs = servers.create_servers(num, *names, image=image)
-    program.list_lxc_containers() 
+    program.list_lxc_containers(*servs) 
     cs_s = concat_array(servs)
     msg = (f" Contenedores '{cs_s}' inicializados\n")
     add_logger.info(msg)

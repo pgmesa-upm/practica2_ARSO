@@ -1,5 +1,6 @@
 
 from time import sleep
+from typing import Container
 from program.platform.machines import load_balancer, servers
 from dependencies.utils.tools import pretty
 from contextlib import suppress
@@ -64,43 +65,47 @@ def show_dependencies():
         print(pretty(d))
 
 # --------------------------------------------------------------------
-def list_lxc_containers():
-    if program_logger.level >= 40: return
-    cs = register.load(containers.ID)
-    if cs is not None:
-        program_logger.info(" Cargando resultados...")
-        running = list(filter(lambda c: c.state == "RUNNING", cs))
-        frozen = list(filter(lambda c: c.state == "FROZEN", cs))
-        total = running+frozen
-        finished = False; timeout = False
-        tf = 10; t = 0; twait = 0.1
-        while not finished:
-            if timeout:
-                err = (" timeout de 'lxc list', no se pudieron " + 
-                        "cargar todas las ips")
-                program_logger.error(err)
-                return
-            cs_list = lxc.lxc_list()
-            for c in total:
-                for net in c.networks:
-                    if net not in cs_list[c.name]["IPV4"]:
-                        break
-                else:
-                    continue
-                break
+def list_lxc_containers(*cs:Container):
+    if logging.getLogger().level >= 40: return
+    program_logger.info(" Cargando resultados...")
+    running = list(filter(lambda c: c.state == "RUNNING", cs))
+    frozen = list(filter(lambda c: c.state == "FROZEN", cs))
+    total = running+frozen
+    finished = False; timeout = False
+    tf = 10; t = 0; twait = 0.1
+    while not finished:
+        if timeout:
+            err = (" timeout de 'lxc list', no se pudieron " + 
+                    "cargar todas las ips")
+            program_logger.error(err)
+            return
+        cs_list = lxc.lxc_list()
+        for c in total:
+            for net in c.networks:
+                if net not in cs_list[c.name]["IPV4"]:
+                    break
             else:
-                finished = True
-            sleep(twait); t += twait
-            if t >= tf:
-                timeout = True
-        lxc.lxc_list(print_=True)
-    else:
-        lxc.lxc_list(print_=True)
+                continue
+            break
+        else:
+            finished = True
+        sleep(twait); t += twait
+        if t >= tf:
+            timeout = True
+    table = lxc.lxc_list(as_str=True)
+    cs_names = list(map(str, cs))
+    filtered_table = lxc.filter_lxc_table(table, *cs_names)
+    if filtered_table != "":
+        print(filtered_table)   
 
-def list_lxc_bridges():
-    if program_logger.level >= 40: return
-    lxc.lxc_network_list(print_=True)
-    
+def list_lxc_bridges(*bgs):
+    if logging.getLogger().level >= 40: return
+    table = lxc.lxc_network_list(as_str=True)
+    bg_names = list(map(str, bgs))
+    filtered_table = lxc.filter_lxc_table(table, *bg_names)
+    if filtered_table != "":
+        print(filtered_table) 
+
 # --------------------------------------------------------------------   
 def check_dependencies():
     global _dependencies

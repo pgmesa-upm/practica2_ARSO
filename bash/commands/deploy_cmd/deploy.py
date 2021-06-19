@@ -206,9 +206,9 @@ def deploy(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
     bgs_s = concat_array(bgs)
     deploy_logger.debug(f" Nombre de bridges (objetos) --> '{bgs_s}'")
     deploy_logger.info(" Creando bridges...")
-    succesful_bgs = bridges.init(*bgs)
-    program.list_lxc_bridges()
-    bgs_s = concat_array(succesful_bgs)
+    successful_bgs = bridges.init(*bgs)
+    program.list_lxc_bridges(*successful_bgs)
+    bgs_s = concat_array(successful_bgs)
     deploy_logger.info(f" Bridges '{bgs_s}' creados\n")
     # Creando contenedores
     num_servs = args[0]
@@ -260,7 +260,7 @@ def deploy(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
                 elif container != None:
                     successful_cs.append(container)
     # Mostramos la informacion y comprobamos flag de arranque
-    program.list_lxc_containers() 
+    program.list_lxc_containers(*successful_cs) 
     cs_s = concat_array(successful_cs)
     msg = (f" Contenedores '{cs_s}' inicializados\n")
     deploy_logger.info(msg)

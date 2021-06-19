@@ -61,7 +61,7 @@ def add(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
         name = options["--name"][0]
     cl = client.create_client(name=name, image=image)
     if cl is not None:
-        program.list_lxc_containers() 
+        program.list_lxc_containers(cl) 
         msg = (f" Cliente '{cl}' inicializado\n")
         add_logger.info(msg)
         add_logger.info(" Estableciendo conexiones ...")

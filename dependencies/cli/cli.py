@@ -1,6 +1,4 @@
 
-from contextlib import suppress
-
 from .aux_classes import Command, Flag
 from .cli_utils import format_str
 
@@ -37,6 +35,20 @@ class Cli:
         """
         self.global_flags[flag.name] = flag
         
+    def process_global_flags(self, args:list,
+                            check_compatibility=True) -> list:
+        gflags = []
+        while len(args) > 0 and args[0] in self.global_flags:
+            gflags.append(args.pop(0))
+        if "-h" in gflags:
+            self.print_help()
+            if self.pass_on_help:
+                raise HelpException()
+            gflags.remove("-h")
+        if check_compatibility:
+            self._check_global_flags(gflags)
+        return gflags
+        
     def process_cmdline(self, args:list) -> dict:
         """Procesa los argumentos que se pasan como parametro. Informa 
         de si estos son validos o no en base a los comandos y flags 
@@ -57,17 +69,11 @@ class Cli:
         """
         args.pop(0) # Eliminamos el nombre del programa
         processed_line = {"_cmd_": None, "gflags": []}
-        # Procesamos flags globales    
-        gflags = []
-        while len(args) > 0 and args[0] in self.global_flags:
-            gflags.append(args.pop(0))
-        if "-h" in gflags:
-            self.print_help()
-            if self.pass_on_help:
-                return None
-            gflags.remove("-h")
-        self._check_global_flags(gflags)
-        processed_line["gflags"] = gflags
+        # Procesamos flags globales   
+        try:
+            processed_line["gflags"] = self.process_global_flags(args)
+        except HelpException:
+            return None
         # Revisamos si alguno de los comandos validos esta en la 
         # linea de comandos introducida
         for cmd in self.commands.values():    
@@ -83,8 +89,10 @@ class Cli:
                     return processed_line
                 except HelpException:
                     return None
-        err_msg = f"El comando '{args[0]}' no se reconoce"
-        raise CmdLineError(_help=(not self.printed), msg=err_msg)
+        if len(args) > 0: 
+            err_msg = f"El comando '{args[0]}' no se reconoce"
+            raise CmdLineError(_help=(not self.printed), msg=err_msg)
+        return processed_line
     
     def _process_cmd(self, cmd:Command, args:list):
         processed_line = { 
@@ -345,7 +353,8 @@ class Cli:
             commands = [command]
         print(paint(" python3 __main__ <gflags> [command] <parameters> " + 
               "<flags> <options> [command] ...", colors.BOLD))
-        print(" + " + paint("Commands", colors.UNDERLINE) + ":")
+        if len(commands) > 0:
+            print(" + " + paint("Commands", colors.UNDERLINE) + ":")
         for cmd in commands:
             description = f"-> {cmd.name} "
             if cmd.description is not None:
@@ -362,8 +371,10 @@ class Cli:
             print(formatted)
             print_recursively(cmd, 0)
         if command is None:
-            print(" + " + paint("Global Flags", colors.UNDERLINE) + ":")   
-            for flag in self.global_flags.values():
+            global_flags = self.global_flags.values()
+            if len(global_flags) > 0:
+                print(" + " + paint("Global Flags", colors.UNDERLINE) + ":")   
+            for flag in global_flags:
                 description = f"-> {flag.name} "
                 if flag.description is not None:
                     description += f"--> {flag.description}"

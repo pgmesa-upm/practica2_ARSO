@@ -58,8 +58,8 @@ def destroy(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
         destroy_logger.warning(" No existen contenedores en el programa\n")
     else:
         c_names = list(map(lambda c: c.name, cs))
-        flags.append("-y") # Añadimos el flag -f
-        delete(args=c_names, flags=flags, tags=[])
+        flags.append("-y") # Añadimos el flag -y
+        delete(args=c_names, flags=flags)
     # Eliminamos bridges
     bgs = register.load(bridges.ID)
     if bgs == None: 
@@ -68,10 +68,16 @@ def destroy(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
         msg = f" Eliminando bridges '{concat_array(bgs)}'..."
         destroy_logger.info(msg)
         successful_bgs = bridges.delete(*bgs)
-        program.list_lxc_bridges()
         bgs_s = concat_array(successful_bgs)
         msg = (f" Bridges '{bgs_s}' eliminados\n")
         destroy_logger.info(msg)  
+        
+        failed_bgs = list(filter(lambda b: b not in successful_bgs, bgs))
+        if len(failed_bgs) > 0:
+            program.list_lxc_bridges(*failed_bgs)
+            bgs_f = concat_array(failed_bgs)
+            msg = (f" Fallo al eliminar los bridge '{bgs_f}'\n")
+            destroy_logger.error(msg)
     # Vemos si se ha eliminado todo  
     cs = register.load(containers.ID)
     bgs = register.load(bridges.ID) 

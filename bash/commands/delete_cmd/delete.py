@@ -61,10 +61,16 @@ def delete(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={},
     # Eliminamos los existentes que nos hayan indicado
     msg = f" Eliminando contenedores '{concat_array(target_cs)}'..."
     delete_logger.info(msg)
-    succesful_cs = containers.delete(*target_cs)
+    successful_cs = containers.delete(*target_cs)
+    cs_s = concat_array(successful_cs)
+    msg = (f" Los contenedores '{cs_s}' han sido eliminados\n")
+    delete_logger.info(msg)
+    
+    failed_cs = list(filter(lambda b: b not in successful_cs, target_cs))
+    if len(failed_cs) > 0:
+        program.list_lxc_bridges(*failed_cs)
+        cs_f = concat_array(failed_cs)
+        msg = (f" Fallo al eliminar los contenedores'{cs_f}'\n")
+        delete_logger.error(msg)
     # Actualizamos la plataforma
     platform.update_conexions()
-    program.list_lxc_containers()
-    cs_s = concat_array(succesful_cs)
-    msg = (f" Los contenedores '{cs_s}' han sido eliminados \n")
-    delete_logger.info(msg)

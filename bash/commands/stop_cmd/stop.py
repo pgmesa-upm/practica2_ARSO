@@ -45,7 +45,7 @@ def stop(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={},
     msg = f" Deteniendo contenedores '{concat_array(target_cs)}'..."
     stop_logger.info(msg)
     succesful_cs = containers.stop(*target_cs)
-    program.list_lxc_containers()
+    program.list_lxc_containers(*succesful_cs)
     cs_s = concat_array(succesful_cs)
     msg = (f" Los contenedores '{cs_s}' han sido detenidos \n")
     stop_logger.info(msg)

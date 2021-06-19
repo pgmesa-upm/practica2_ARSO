@@ -173,6 +173,20 @@ def pretty(obj:object, *attr_colums, firstcolum_order:list=None) -> str:
         block = f"\n{attrs_line}\n{subdash}\n{values_line}\n{subdash}"
         table_str += block
     return table_str
+
+# def pretty_fusion(*pretty_str) -> str:
+#     fusion = ""
+#     for i, string in enumerate(pretty_str):
+#         last = i == len(pretty_str) - 1
+#         index = len(string) - 1
+#         if not last:
+#             char = string[index]
+#             while char != "\n":
+#                 index -= 1
+#                 char = string[index]
+#         fusion += string[:index]
+#     return fusion
+
 # --------------------------------------------------------------------
 def format_str(string:str, maxline_length:int=None, 
                indent:int=None, tripleq_mode=False) -> str:
