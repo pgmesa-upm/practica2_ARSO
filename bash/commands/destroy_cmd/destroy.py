@@ -76,7 +76,7 @@ def destroy(args:list=[], options:dict={}, flags:list=[], nested_cmd:dict={}):
         if len(failed_bgs) > 0:
             program.list_lxc_bridges(*failed_bgs)
             bgs_f = concat_array(failed_bgs)
-            msg = (f" Fallo al eliminar los bridge '{bgs_f}'\n")
+            msg = (f" No se han podido eliminar los bridge '{bgs_f}'\n")
             destroy_logger.error(msg)
     # Vemos si se ha eliminado todo  
     cs = register.load(containers.ID)
