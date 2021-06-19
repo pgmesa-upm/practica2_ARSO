@@ -5,9 +5,6 @@ from .cli_utils import format_str
 from .external_dep import colorama
 from .external_dep.colorama import Fore, Back, Style
 
-# import colorama
-# from colorama import Fore, Back, Style
-
 class Cli:
     """Interfaz que se encarga de controlar que la linea de comandos
     introducida en un programa es correcta, (mira que todos los flags y 
@@ -299,7 +296,7 @@ class Cli:
                   with_colors=with_colors, with_format=with_format):
             if with_format:
                 if with_colors:
-                    return  Back.BLACK + color +  line + colors.ENDC
+                    return color +  line + colors.ENDC
                 elif color == colors.BOLD or color == colors.UNDERLINE:
                     return color  + line + colors.ENDC
             return line
