@@ -366,7 +366,7 @@ class Cli:
                 formatted, indent=cmd_indent+cmd_first_line_diff
             )
             formatted = formatted.replace(
-                cmd.name, paint(cmd.name, colors.WARNING), 1
+                cmd.name, paint(paint(cmd.name, colors.WARNING), colors.BOLD), 1
             )
             print(formatted)
             print_recursively(cmd, 0)
