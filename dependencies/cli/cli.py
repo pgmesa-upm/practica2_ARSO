@@ -326,7 +326,7 @@ class Cli:
                     )
                     formatted = formatted.replace(
                         n_cmd.name, 
-                        paint(paint(n_cmd.name, colors.OKCYAN), colors.BOLD), 
+                        paint(paint(n_cmd.name, colors.OKCYAN), Style.BRIGHT), 
                         1
                     )
                     print(formatted)
@@ -358,7 +358,7 @@ class Cli:
                         )
                         formatted = formatted.replace(
                             elem.name, 
-                            paint(paint(elem.name, color), colors.BOLD),
+                            paint(paint(elem.name, color), Style.BRIGHT),
                             1
                         )
                         print(formatted)
