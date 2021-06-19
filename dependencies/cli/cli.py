@@ -13,11 +13,17 @@ class Cli:
     que va a tener el programa y sus caracteristicas)"""
     def __init__(self, pass_on_help=True):
         self.commands = {}
-        self.global_flags = {"-h": Flag(
-            "-h", 
-            description=("shows information about a command or all of " +
-                        "them if a valid one is not introduced")
-        )}
+        self.global_flags = {
+            "-h": Flag("-h", 
+                description=("shows information about a command or " + 
+                             "all of them if a valid one is not introduced")
+            ),
+            "-hc": Flag("-hc",
+                description=("is the same as -h but with some predefined " + 
+                             "colors"),
+                notCompatibleWithFlags=["-h"]
+            )
+        }
         self.pass_on_help = pass_on_help
         self.printed = False
         
@@ -42,13 +48,15 @@ class Cli:
         gflags = []
         while len(args) > 0 and args[0] in self.global_flags:
             gflags.append(args.pop(0))
-        if "-h" in gflags:
-            self.print_help()
+        if check_compatibility:
+            self._check_global_flags(gflags)
+        if "-h" in gflags or "-hc" in gflags:
+            color=False
+            if "-hc" in gflags: color=True
+            self.print_help(with_colors=color)
             if self.pass_on_help:
                 raise HelpException()
             gflags.remove("-h")
-        if check_compatibility:
-            self._check_global_flags(gflags)
         return gflags
         
     def process_cmdline(self, args:list) -> dict:
@@ -219,11 +227,19 @@ class Cli:
             list: lista con los flags que habia en la linea de 
                 de comandos proporcionada (args)
         """  
-        if "-h" in args: 
-            self.print_help(command=cmd)
+        if ("-h" in args) != ("-hc" in args): 
+            color=False
+            if "-hc" in args: color=True
+            self.print_help(command=cmd, with_colors=color)
             if self.pass_on_help:
                 raise HelpException()
             args.remove("-h")
+        elif "-h" in args and "-hc" in args:
+            errmsg = (f"Los flags '-h' y " + 
+                        f"'-hc' no son compatibles")
+            raise CmdLineError(
+                _help=(not self.printed), msg=errmsg
+            )
         inFlags = []
         for arg in args: 
             for validFlag in cmd.flags.values():
@@ -263,7 +279,7 @@ class Cli:
                                 )
                     inFlags.append(validFlag)
       
-    def print_help(self, command=None, with_colors=True, with_format=True):
+    def print_help(self, command=None, with_colors=False, with_format=True):
         colorama.init()
         """Imprime las descripciones de cada comando y flag de la cli
         de forma estructurada"""
