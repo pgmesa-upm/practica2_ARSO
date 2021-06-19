@@ -312,7 +312,7 @@ class Cli:
                   with_colors=with_colors, with_format=with_format):
             if with_format:
                 if with_colors:
-                    return color +  line + colors.ENDC
+                    return color + line + colors.ENDC
                 elif color == colors.BOLD or color == colors.UNDERLINE:
                     return color  + line + colors.ENDC
             return line
@@ -339,7 +339,7 @@ class Cli:
                     )
                     formatted = formatted.replace(
                         n_cmd.name, 
-                        paint(paint(n_cmd.name, colors.OKCYAN), Style.BRIGHT), 
+                        paint(paint(n_cmd.name, colors.OKCYAN), colors.BOLD), 
                         1
                     )
                     print(formatted)
@@ -371,7 +371,7 @@ class Cli:
                         )
                         formatted = formatted.replace(
                             elem.name, 
-                            paint(paint(elem.name, color), Style.BRIGHT),
+                            paint(paint(elem.name, color), colors.BOLD),
                             1
                         )
                         print(formatted)
