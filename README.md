@@ -4,5 +4,5 @@ Utilizacion de la plataforma desarrollada en la practica 1 para montar un sistem
 (configuracion de contenedores)
 
 ## Requirements
-Python >= 3.7
-No requiere de librerias externas
+- Python >= 3.7
+- No requiere de librerias externas
